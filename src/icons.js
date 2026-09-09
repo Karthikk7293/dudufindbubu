@@ -1,0 +1,30 @@
+const svg = (body, extra = '') => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" ${extra}>${body}</svg>`;
+export const icons = {
+  camera: svg('<rect x="3" y="6" width="18" height="14" rx="3"/><path d="m8 6 1-3h6l1 3"/><circle cx="12" cy="13" r="4"/>'),
+  recenter: svg('<path d="M4 9a8 8 0 1 1 0 7M4 4v5h5"/><circle cx="12" cy="12" r="2"/>'),
+  sun: svg('<circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5"/>'),
+  moon: svg('<path d="M20.5 14A8.8 8.8 0 0 1 10 3.5 9 9 0 1 0 20.5 14Z"/><path d="M18 3v4m-2-2h4"/>'),
+  sound: svg('<path d="m11 5-6 4H2v6h3l6 4z"/><path d="M15 8a6 6 0 0 1 0 8m3-11a10 10 0 0 1 0 14"/>'),
+  muted: svg('<path d="m11 5-6 4H2v6h3l6 4z"/><path d="m16 9 6 6m0-6-6 6"/>'),
+  help: svg('<circle cx="12" cy="12" r="9"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 2-3 4m.1 3h.01"/>'),
+  headphones: svg('<path d="M3 14v-3a9 9 0 0 1 18 0v3"/><rect x="2" y="12" width="5" height="9" rx="2"/><rect x="17" y="12" width="5" height="9" rx="2"/>'),
+  leaf: svg('<path d="M20 3C7 2 1 8 5 16c8 5 15-1 15-13Z"/><path d="m3 21 12-12"/>'),
+  heart: svg('<path d="M20.8 4.6a5.6 5.6 0 0 0-8 0L12 5.5l-.8-.9a5.6 5.6 0 0 0-8 8L12 22l8.8-9.4a5.6 5.6 0 0 0 0-8Z"/>'),
+  bag: svg('<rect x="5" y="6" width="14" height="16" rx="4"/><path d="M8 6V4a4 4 0 0 1 8 0v2M5 11h14"/><rect x="8" y="14" width="8" height="5" rx="2"/>'),
+  map: svg('<path d="m3 5 6-3 6 3 6-3v17l-6 3-6-3-6 3zm6-3v17m6-14v17"/>'),
+  pause: svg('<path d="M9 5v14M15 5v14" stroke-width="3"/>'),
+  zoomIn: svg('<path d="M12 5v14M5 12h14"/>'),
+  zoomOut: svg('<path d="M5 12h14"/>'),
+  overview: svg('<path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"/><circle cx="12" cy="12" r="3"/>'),
+  fullscreen: svg('<path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"/>'),
+};
+export const giftArt = {
+  chocolates: `<svg viewBox="0 0 64 64" aria-hidden="true"><rect x="8" y="20" width="48" height="33" rx="7" fill="#b98675"/><rect x="12" y="24" width="40" height="25" rx="4" fill="#efd5b8"/><g fill="#77523e"><path d="M24 29c-9-6-13 5 0 12 13-7 9-18 0-12M42 29c-9-6-13 5 0 12 13-7 9-18 0-12"/></g><path d="m8 15 46-7 3 13-46 7z" fill="#d6a795"/><path d="m29 12 6-1 2 13-6 1z" fill="#f6e0b8"/></svg>`,
+  balloon: `<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M32 13C10-5-1 25 32 40 65 25 54-5 32 13" fill="#d88f9b" stroke="#bb7581" stroke-width="1.5"/><path d="m32 39-3 5h6z" fill="#bb7581"/><path d="M32 44c-11 8 9 9-1 17" stroke="#9b927b" fill="none"/><path d="M16 19q0-7 8-6" stroke="#f3c8ce" stroke-width="3" fill="none" stroke-linecap="round"/></svg>`,
+  musicbox: `<svg viewBox="0 0 64 64" aria-hidden="true"><path d="m9 32 24-9 23 9v20l-24 9-23-9z" fill="#af9270"/><path d="m9 32 24-9 23 9-24 9z" fill="#d2b994"/><path d="M32 41v20" stroke="#8f795c"/><path d="M39 6v21m0-16 14-4v16" stroke="#739c94" stroke-width="3" fill="none"/><ellipse cx="34" cy="27" rx="6" ry="4" fill="#739c94"/><ellipse cx="48" cy="23" rx="6" ry="4" fill="#739c94"/><path d="M52 42h7v6h-5" fill="none" stroke="#887455" stroke-width="3"/></svg>`,
+  flowers: `<svg viewBox="0 0 64 64" aria-hidden="true"><path d="m17 31 14 28 16-28" fill="#e6c99c" stroke="#ac8c63" stroke-width="1.4"/><path d="m30 46-6-26m10 28 6-30m-8 28V15" stroke="#71844e" stroke-width="2.5"/><path d="M28 38q-13-1-12-10 9-2 12 10m6 1q13-1 13-10-10-1-13 10" fill="#93a475"/><g fill="#d998a0"><circle cx="21" cy="20" r="6"/><circle cx="14" cy="16" r="6"/><circle cx="15" cy="24" r="6"/></g><g fill="#fff9db"><circle cx="32" cy="10" r="6"/><circle cx="26" cy="16" r="6"/><circle cx="37" cy="16" r="6"/><circle cx="31" cy="21" r="6"/></g><g fill="#d18e5d"><circle cx="45" cy="23" r="6"/><circle cx="39" cy="27" r="6"/><circle cx="49" cy="29" r="6"/></g><circle cx="31" cy="15" r="4" fill="#d7b457"/><circle cx="17" cy="20" r="3" fill="#ecd498"/><circle cx="44" cy="27" r="3" fill="#f6d497"/><path d="M23 46h16v5H23z" fill="#ce8a78"/></svg>`,
+  honey: `<svg viewBox="0 0 64 64" aria-hidden="true"><rect x="17" y="19" width="31" height="37" rx="10" fill="#d4a452" stroke="#ae864d" stroke-width="1.5"/><rect x="18" y="12" width="29" height="10" rx="3" fill="#c79761"/><path d="M17 27h31v19H17z" fill="#f6ead0"/><path d="M32 30c-1 4-6 7-6 11a6 6 0 0 0 12 0c0-4-5-7-6-11Z" fill="#d3a14d"/><path d="m45 5 8 8m-11-5 8 8m-8-11 11 11M45 15l-5 6" stroke="#99724a" stroke-width="3" stroke-linecap="round"/></svg>`,
+  scarf: `<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M14 15q16-7 33 0l-4 15-24-2z" fill="#c88878" stroke="#ad7163" stroke-width="1.5"/><path d="m31 22 15 2-3 32-14-2z" fill="#d79b89" stroke="#ad7163" stroke-width="1.5"/><path d="m20 26 11 1-6 20-12-3z" fill="#c17e6e" stroke="#ad7163" stroke-width="1.5"/><path d="m29 49 14 2M16 39l12 3M18 20l27 3" stroke="#eed3b6" stroke-width="3"/><path d="m30 54-1 5m5-5v6m4-5v5m4-4v5M14 44l-1 5m5-4-1 5m5-3-1 4" stroke="#ad7163" stroke-width="2"/></svg>`,
+  letter: `<svg viewBox="0 0 64 64" aria-hidden="true"><rect x="9" y="18" width="47" height="33" rx="3" fill="#f5e7c9" stroke="#b99d73" stroke-width="1.5"/><path d="m10 49 22-18 23 18" fill="#ead8b3" stroke="#c5aa80" stroke-width="1.5"/><path d="m10 20 22 18 23-18" fill="#fff3d8" stroke="#b99d73" stroke-width="1.5"/><path d="M32 30c-8-7-15 3 0 12 15-9 8-19 0-12" fill="#c58679"/></svg>`,
+  cake: `<svg viewBox="0 0 64 64" aria-hidden="true"><ellipse cx="32" cy="54" rx="26" ry="5" fill="#d7d8be"/><path d="M12 32h40v18c-10 9-30 9-40 0z" fill="#d9a18d" stroke="#c58d7a" stroke-width="1.4"/><path d="M12 41c8 6 32 6 40 0" fill="none" stroke="#fff1d7" stroke-width="6"/><ellipse cx="32" cy="31" rx="20" ry="9" fill="#fff4de"/><path d="M12 31v8q3 6 6 0v-3q3 7 6 0v-1q5 8 8 0 4 8 8 0 4 7 7 0 4 6 5 1v-5" fill="#fff4de"/><path d="M32 28V14" stroke="#8aab9f" stroke-width="4"/><path d="M32 6q-7 8 0 9 7-1 0-9" fill="#dba85c"/><circle cx="20" cy="29" r="3" fill="#c98275"/><circle cx="43" cy="30" r="3" fill="#c98275"/></svg>`,
+};

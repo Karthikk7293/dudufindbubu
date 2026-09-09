@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#f6f5ed" />
+    <meta name="description" content="A little journey. A lot of love. Help Dudu explore a cozy 3D forest, collect eight birthday surprises, and find Bubu." />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="stylesheet" href="/src/style.css" />
+    <title>Dudu finds Bubu — A birthday adventure</title>
+  </head>
+  <body>
+    <section id="mobile-notice" class="mobile-notice" hidden aria-labelledby="mobile-title">
+      <div class="mobile-card">
+        <div class="loader-brand">DUDU <span>&</span> BUBU <small>A BIRTHDAY ADVENTURE</small></div>
+        <div class="device-illustration" aria-hidden="true"><span>♡</span><i>✦</i><b>☾</b></div>
+        <span class="loader-eyebrow">A LITTLE MORE ROOM TO WANDER</span>
+        <h1 id="mobile-title">Our forest is growing.</h1>
+        <p>Mobile screens aren’t supported yet. We’re working on bringing all these little forest details to your phone.</p>
+        <p class="device-invitation">For now, visit Dudu and Bubu on a <strong>tablet or desktop</strong>.<small>Using a desktop? Make this window a little wider.</small></p>
+        <span class="mobile-footnote">We’ll save you a little spot under the stars. ♡</span>
+      </div>
+    </section>
+    <div id="loading" class="forest-loader" data-stage="0">
+      <div class="loader-brand">DUDU <span>&</span> BUBU <small>A BIRTHDAY ADVENTURE</small></div>
+      <div class="loader-layout">
+        <div class="loader-copy">
+          <span class="loader-eyebrow">A LITTLE WORLD, COMING TO LIFE</span>
+          <h1>Growing a little<br/><em>adventure.</em></h1>
+          <div class="skeleton-copy" aria-hidden="true"><i></i><i></i><i></i><b></b></div>
+          <div class="loader-status" role="status" aria-live="polite"><span id="loading-status">Opening the forest…</span><span id="loading-percent" aria-hidden="true">0%</span></div>
+          <progress id="loading-progress" max="100" value="0" aria-label="Preparing Sunnywood Forest"></progress>
+          <p id="loading-tip">Eight little gifts. One very special bear.</p>
+          <button id="loading-retry" class="primary-button" hidden>Try again <span>↗</span></button>
+        </div>
+        <div class="forest-skeleton" aria-hidden="true">
+          <div class="skeleton-sun"></div><div class="skeleton-cloud cloud-one"></div><div class="skeleton-cloud cloud-two"></div>
+          <div class="skeleton-island"><div class="skeleton-road"></div><div class="skeleton-pond"></div>
+            <i class="skeleton-tree tree-one"></i><i class="skeleton-tree tree-two"></i><i class="skeleton-tree tree-three"></i><i class="skeleton-tree tree-four"></i><i class="skeleton-tree tree-five"></i><i class="skeleton-tree tree-six"></i>
+            <div class="skeleton-house"></div><div class="skeleton-gift"></div>
+          </div>
+          <div class="skeleton-map"><i></i><b></b></div>
+        </div>
+      </div>
+      <span class="loader-footer">A bag full of surprises. A forest full of love.</span>
+    </div>
+    <noscript><style>#loading{display:none}</style><p>Please enable JavaScript to play Dudu finds Bubu.</p></noscript>
+    <div id="app" class="is-loading" inert aria-busy="true">
+      <header class="topbar">
+        <a class="brand" href="/" aria-label="Dudu finds Bubu home">
+          <span class="brand-bears" aria-hidden="true"><svg viewBox="0 0 70 43"><g stroke="#344b3a" stroke-width="2.2"><circle cx="13" cy="10" r="6" fill="#bf8c61"/><circle cx="36" cy="10" r="6" fill="#bf8c61"/><rect x="8" y="8" width="34" height="29" rx="14" fill="#bf8c61"/><circle cx="23" cy="23" r="1.6" fill="#344b3a" stroke="none"/><circle cx="33" cy="23" r="1.6" fill="#344b3a" stroke="none"/><ellipse cx="18" cy="29" rx="3" ry="2.5" fill="#eab65f" stroke="none"/><ellipse cx="37" cy="29" rx="3" ry="2.5" fill="#eab65f" stroke="none"/><path d="M25 28q1 3 3 0q2 3 3 0" fill="none" stroke-width="1.5"/><circle cx="42" cy="12" r="6" fill="#344b3a"/><circle cx="63" cy="12" r="6" fill="#344b3a"/><rect x="36" y="10" width="32" height="28" rx="13" fill="#fffdf5"/><circle cx="47" cy="26" r="1.6" fill="#493028" stroke="none"/><circle cx="58" cy="26" r="1.6" fill="#493028" stroke="none"/><ellipse cx="41" cy="31" rx="3" ry="2.5" fill="#e6acaa" stroke="none"/><ellipse cx="63" cy="31" rx="3" ry="2.5" fill="#e6acaa" stroke="none"/><path d="M49 30q1 3 3 0q2 3 3 0" fill="none" stroke-width="1.5"/></g></svg></span>
+          <span>dudu <span class="brand-plus">&</span> bubu<small>A BIRTHDAY ADVENTURE</small></span>
+        </a>
+        <div class="topbar-right">
+          <span class="chapter"><span></span> A little world, just for you</span>
+          <button class="icon-button" id="intro-time" aria-label="Switch to night mode" aria-pressed="false" title="Switch to night mode"></button>
+          <button class="icon-button" id="sound-button" aria-label="Turn sound on" aria-pressed="false" title="Toggle sound"></button>
+          <button class="icon-button" id="help-button" aria-label="How to play" title="How to play"></button>
+        </div>
+      </header>
+
+      <main id="game-shell">
+        <div id="world" role="application" tabindex="0" aria-label="Sunnywood forest adventure. Use arrow keys or W A S D to move Dudu, E to collect a nearby gift, M for the map, and Escape to pause."></div>
+        <div class="scene-grain" aria-hidden="true"></div>
+
+        <section class="intro" id="intro" aria-labelledby="intro-title">
+          <div class="eyebrow"><span class="little-flower">✳</span> A SMALL ADVENTURE WITH A BIG HEART</div>
+          <h1 id="intro-title">A little journey.<br/>A lot of <span class="love-word">love.<svg viewBox="0 0 175 15" aria-hidden="true"><path d="M3 9Q85-1 171 8M20 14Q103 5 157 13"/></svg></span></h1>
+          <p>It’s Bubu’s birthday. And Dudu has a plan.<br class="desktop-br"/> A bag full of little surprises, a wander through<br class="desktop-br"/> the woods, and his favorite bear at the end.</p>
+          <button class="primary-button" id="start-button" disabled><span>Let’s find Bubu</span><span class="button-arrow">↗</span></button>
+          <div class="sound-note"><span id="headphone-icon"></span> A little lovelier with sound on</div>
+          <div class="intro-notes"><span><i id="leaf-icon"></i> Wander at your own pace</span><span><i id="heart-icon"></i> Made for a little smile</span></div>
+        </section>
+
+        <div class="world-caption" id="world-caption"><span class="caption-line"></span><span>SUNNYWOOD FOREST<small>Somewhere between here & a happy birthday</small></span></div>
+        <div class="scene-label" id="dudu-label"><span>Home, sweet home.</span><svg width="37" height="41" viewBox="0 0 37 41" aria-hidden="true"><path d="M3 2Q36 2 27 32m-8-6 8 9 7-10"/></svg></div>
+
+
+        <div class="toast hidden" id="toast" role="status" aria-live="polite"></div>
+        <button class="interact hidden" id="interact-button"><kbd>E</kbd><span id="interact-label">Collect gift</span></button>
+        <div class="speech-bubble hidden" id="speech" role="status"></div>
+        <div class="sunlight" aria-hidden="true"></div>
+        <button id="guide-button" class="guide-card hidden" aria-label="Follow the gift trail">
+          <span id="guide-art" aria-hidden="true"></span><span class="guide-copy"><strong id="guide-name"></strong><small id="guide-detail"></small></span><span id="guide-arrow" aria-hidden="true">↑</span>
+        </button>
+        <button id="gift-pointer" class="gift-pointer hidden" aria-label="Walk to tracked gift"><span id="pointer-name"></span><span class="pointer-arrow" aria-hidden="true">↓</span></button>
+        <div id="party-caption" class="party-caption hidden" role="status" aria-live="polite"><span>MAKE A LITTLE WISH</span><strong id="party-line">Happy birthday, Bubu ♡</strong></div>
+        <div id="moon-caption" class="moon-caption hidden" role="status" aria-live="polite"><span>THE MOONWATCH TREE</span><strong id="moon-line">One more little adventure, together.</strong><small id="moon-detail"></small></div>
+
+
+        <button class="map-preview" id="map-button" aria-label="Open forest map">
+          <div class="map-heading"><span id="map-icon"></span><span>A little lay of the land</span><span class="expand-icon">↗</span></div>
+          <canvas id="mini-map" width="300" height="170" aria-label="Forest map showing Dudu’s location and gifts"></canvas>
+          <div class="map-footer"><span><i class="map-dot"></i> You are here</span><kbd>M</kbd></div>
+        </button>
+
+        <nav id="play-tools" class="play-tools hidden" aria-label="Adventure controls">
+          <button id="play-time" class="floating-button" aria-label="Switch to night mode" aria-pressed="false" title="Day / night (T)"></button>
+          <button id="play-bag" class="floating-button" aria-label="Open gift bag" title="Gift bag (B)"><span id="play-bag-icon"></span><small id="collected-count">0</small></button>
+          <button id="play-map" class="floating-button" aria-label="Open forest map" title="Map (M)"></button>
+          <button id="play-pause" class="floating-button" aria-label="Pause adventure" title="Pause (Escape)"></button>
+        </nav>
+        <div id="zoom-tools" class="zoom-tools hidden" role="group" aria-label="Camera zoom">
+          <button id="camera-mode" aria-label="Switch to overhead view" aria-pressed="true" title="Change camera (C)"></button>
+          <button id="zoom-out" aria-label="Zoom out" title="Zoom out (−)"></button>
+          <button id="zoom-overview" aria-label="See whole forest" aria-pressed="false" title="See the whole forest (0)"></button>
+          <button id="camera-recenter" aria-label="Look from behind Dudu" title="Look from behind Dudu (R)"></button>
+          <button id="zoom-in" aria-label="Zoom in" title="Zoom in (+)"></button>
+        </div>
+        <div class="touch-controls hidden" id="touch-controls">
+          <div class="joystick" id="joystick" aria-label="Drag to move Dudu"><div id="joystick-knob"></div></div>
+          <button class="touch-interact" id="touch-interact" aria-label="Collect or talk">♡</button>
+        </div>
+
+        <div class="webgl-fallback hidden" id="webgl-fallback"><h2>The forest needs a little help.</h2><p>Enable hardware acceleration in your browser, then reload to enter this 3D world.</p><button class="primary-button" id="reload-button">Try again ↗</button></div>
+      </main>
+
+      <footer class="bottom-bar">
+        <div id="intro-footer"><span class="footer-dot"></span> Eight little gifts. One very special bear.</div>
+        <div class="keyboard-help hidden" id="keyboard-help"><span><kbd>W A S D</kbd> or <kbd>↑ ← ↓ →</kbd> Move</span><span><kbd>SHIFT</kbd> Run</span><span><kbd>E</kbd> Collect / talk</span><span class="optional-control"><kbd>ESC</kbd> Pause</span></div>
+        <span class="footer-love">Take your time. Love’s not in a hurry. <span>♡</span></span>
+      </footer>
+
+      <dialog id="bag-dialog" class="paper-dialog bag-dialog" aria-label="Dudu’s gift bag">
+        <button class="dialog-close" data-close aria-label="Close gift bag">×</button>
+        <div class="eyebrow">LITTLE THINGS, CARRIED WITH LOVE</div><h2>Dudu’s little bag</h2>
+        <p id="quest-description">Find eight surprises on the way to Bubu’s nest.</p>
+        <div class="bag-slots" id="bag-slots"></div>
+        <div class="quest-progress"><span id="progress-fill"></span></div>
+        <div class="quest-bottom"><span id="progress-text">0 of 8 gifts collected</span><button id="hint-button">A little hint ↗</button></div>
+        <p class="bag-hint" id="bag-hint">Pick a gift to read Dudu’s little note.</p>
+        <button class="text-button hidden" id="track-gift">Follow this gift’s trail ↗</button>
+        <button class="primary-button" data-close>Back to the forest <span>↗</span></button>
+      </dialog>
+      <dialog id="help-dialog" class="paper-dialog">
+        <button class="dialog-close" data-close aria-label="Close">×</button>
+        <span class="dialog-flower">✳</span><div class="eyebrow">A FEW LITTLE POINTERS</div><h2>A walk in the woods.</h2>
+        <p>Gather all eight birthday gifts before visiting Bubu’s nest. Only then will she come outside! Follow the glowing trail, or select a missing gift in your bag to track it. Tap the gift pointer to walk there.</p>
+        <div class="control-list"><div><span><kbd>W A S D</kbd> / <kbd>↑ ← ↓ →</kbd></span><span>Wander around</span></div><div><kbd>SHIFT</kbd><span>Run a little faster</span></div><div><kbd>E</kbd><span>Pick up a gift / talk to Bubu</span></div><div><kbd>M</kbd><span>Open your forest map</span></div><div><kbd>B</kbd><span>Open the gift bag</span></div><div><kbd>+ / −</kbd><span>Zoom in / out</span></div><div><kbd>0</kbd><span>See the whole forest</span></div><div><kbd>T</kbd><span>Switch day / night</span></div><div><kbd>ESC</kbd><span>Pause & take a breath</span></div></div>
+        <div class="control-list camera-help"><div><kbd>C</kbd><span>Third person / overhead view</span></div><div><kbd>R</kbd><span>Look from behind Dudu</span></div><div><kbd>J / L · I / K</kbd><span>Rotate / tilt the camera</span></div><div><span>Drag / swipe the forest</span><span>Look around in third person</span></div></div>
+        <p class="dialog-footnote">At the picnic, choose “Celebrate Bubu’s birthday”, then wander together. Click or tap the ground to walk; drag to look around and scroll to zoom. On a tablet, use the thumbstick and heart button, and pinch to zoom. After the birthday, follow the moon pointer and climb the Moonwatch tree together. Watch the stars from the nest, then choose “Climb down together” to keep exploring. Refreshing starts a fresh adventure with an empty gift bag.</p><button class="primary-button" data-close>Got it. Let’s wander <span>↗</span></button>
+      </dialog>
+
+      <dialog id="map-dialog" class="paper-dialog map-dialog">
+        <button class="dialog-close" data-close aria-label="Close map">×</button><div class="eyebrow">FOLLOW YOUR LITTLE HEART</div><h2>Sunnywood Forest</h2><p>Eight surprises, two little homes, and a Moonwatch nest above the trees.</p>
+        <canvas id="large-map" width="760" height="650" aria-label="Sunnywood forest map with marked gift locations and Bubu’s picnic"></canvas>
+        <div class="map-legend"><span><i class="map-dot"></i> Dudu</span><span><i class="map-dot gift-dot"></i> A surprise</span><span><i class="map-dot bubu-dot"></i> Bubu’s picnic</span></div>
+      </dialog>
+
+      <dialog id="pause-dialog" class="paper-dialog">
+        <button class="dialog-close" data-close aria-label="Resume game">×</button><span class="dialog-flower">☁</span><div class="eyebrow">NO NEED TO HURRY</div><h2>A little breather.</h2><p>The forest will be right here.<br/>Your birthday surprises are safely in your bag.</p><button class="primary-button" data-close>Keep wandering <span>↗</span></button><div class="pause-options"><button id="pause-sound" class="menu-option">Sound on</button><button id="pause-time" class="menu-option" aria-pressed="false">Switch to night mode</button><button id="pause-help" class="menu-option">How to play</button><button id="fullscreen-button" class="menu-option">Enter full screen</button></div><button class="text-button" id="restart-button">Start a fresh adventure</button>
+      </dialog>
+
+      <dialog id="ending-dialog" class="paper-dialog ending-dialog">
+        <div class="ending-hearts" aria-hidden="true">♡ <span>♡</span> ♡</div><div class="eyebrow">YOU FOUND YOUR FAVORITE BEAR</div><h2>Happy birthday,<br/><em>Bubu.</em></h2><p>“The flowers are lovely. The cake is perfect.<br/>But my favorite gift is you.”</p><div class="ending-gifts" id="ending-gifts"></div><div class="ending-note">The party is over. Our little adventure isn’t.<br/>Bubu will walk with you. Follow the moon trail<br/>to a treetop nest made for stargazing.</div><button class="primary-button" id="stay-button">Walk together <span>♡</span></button><button class="text-button" id="play-again-button">One more little adventure ↗</button>
+      </dialog>
+    </div>
+    <script type="module" src="/src/boot.js"></script>
+  </body>
+</html>
