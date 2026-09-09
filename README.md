@@ -11,6 +11,19 @@ npm run dev
 
 Open http://localhost:3000. Use Node.js 18.19+ (Node.js 20+ recommended).
 
+## Deploy to Vercel
+
+The repository includes [`vercel.json`](./vercel.json), which configures Vercel to install the locked dependencies with `npm ci`, build the game with `npm run build`, and publish `dist` as a static Vite site. These settings use Vercel's [project configuration](https://vercel.com/docs/project-configuration/vercel-json).
+
+1. Commit and push the latest changes, including `vercel.json` and `package-lock.json`, to GitHub.
+2. In Vercel, choose **Add New → Project** and import this repository.
+3. Keep **Root Directory** at the repository root (the folder containing `package.json`). The framework is **Vite**; the install, build, and output settings come from `vercel.json`.
+4. Leave **Environment Variables** empty and click **Deploy**.
+
+Open the deployment URL to play. Future pushes to the connected production branch trigger another deployment through Vercel's [Git integration](https://vercel.com/docs/git).
+
+The game runs entirely in the browser. The published files include its fonts and favicon; no database, backend service, or API keys are required. The local port `3000` is only for development. Vercel serves the built game over HTTPS. The `.vercel/` folder created by the optional Vercel CLI is ignored by Git.
+
 ## Play
 
 - **WASD / arrow keys:** move relative to the camera
