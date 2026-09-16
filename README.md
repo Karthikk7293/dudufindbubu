@@ -54,7 +54,9 @@ Play begins in a close third-person perspective, with a low camera that follows 
 
 The eight gifts can be collected in any order. The expanded forest has connected inner and outer roads, two ponds with bridges, two bear nests, heart balloons, and roaming rabbits, deer, foxes, and sheep. Collecting a gift displays a brief message without interrupting your walk. A labelled pointer and a glowing, collision-aware trail lead to the next missing gift, including the love letter. The pointer stays at the screen edge when the gift is off screen. Open the bag to track a particular gift, read a note, or get a hint. The trail leads to Bubu once the bag is full. Gentle snow, warm sunshine, flying birds, and windblown leaves bring the forest to life; lambs have rounded faces, soft ears, and little smiles.
 
-The trees have textured bark, tapering branch forks, pointed leaves, and uneven pine boughs, with denser foliage on larger screens. The forest mixes spreading oaks, green trees with pink blossoms, umbrella crowns with hanging vines, willows, white-barked birches, and pines. Flower beds contain daisies, sunflowers, tulips, lavender, bluebells, and roses. Saplings, tall birches and pines, broad mature oaks, and elder trees have different heights and crown widths. Dudu and Bubu are smaller in proportion to their surroundings. Four small butterfly varieties visit the flowers; drifting clouds, gently swaying foliage, and falling blossom petals add movement.
+The trees have textured bark, tapering branch forks, rounded leaves, layered canopy textures, and uneven pine boughs, with denser foliage on larger screens. The forest mixes spreading oaks, green trees with pink blossoms, umbrella crowns with hanging vines, willows, white-barked birches, and pines. Flower beds contain daisies, sunflowers, tulips, lavender, bluebells, and roses. Saplings, tall birches and pines, broad mature oaks, and elder trees have different heights and crown widths. Dudu and Bubu are smaller in proportion to their surroundings. Four small butterfly varieties visit the flowers; drifting clouds, gently swaying foliage, and falling blossom petals add movement.
+
+The [sunny woodland reference](./references/environment.md) informs the olive meadow, fine curved grass, ferns around tree roots, warm directional light and soft shafts in the clearings. Continuous ground colours replace the flat oval patches. Grass bends in the breeze and lowers around Dudu's feet; planting avoids the curved roads, gift rings, ponds and doorways. Fine grass and leaf silhouettes are reserved for closer views, with fewer instances on phones. Rain darkens the grass; night and rain fade the shafts away. Reduced motion stops decorative sway. The existing character models are preserved.
 
 Use the **sun–moon button** or **T** to change the time of day. Night brings a moon and twinkling stars, occasional shooting stars, roadside lanterns, glowing nest windows, and fireflies. Day brings the sun, birds, and butterflies back. Lighting fades smoothly between modes. Reduced-motion settings keep decorative movement still and switch lighting immediately. Your day/night preference survives refreshing or restarting the adventure; changing it in the pause menu keeps the game paused.
 
@@ -91,6 +93,7 @@ npm test
 npm run test:browser
 npm run test:mobile
 npm run test:weather
+npm run test:environment
 npm run test:interaction
 npm run test:browser -- --refinements
 npm run test:browser -- --characters
@@ -119,6 +122,8 @@ The interactive engine study is preserved at **`/engine.html`** in both developm
 The mobile check exercises portrait entry, a denied orientation lock, landscape touch controls, simultaneous movement and camera swipes, pinch zoom, cancelled touches, dialog restoration after rotation, gift collection, night mode, small landscape screens, and a fresh adventure after refresh. `node tests/forest-story.mjs` checks arrival, celebration, pausing, and companion walking; `node tests/deployment.browser.mjs` checks both built pages against a preview server on port 4174 (`PREVIEW_URL` overrides it). `node tests/forest-visuals.mjs` captures the bear, wildlife, and tree studies.
 
 The weather check covers rainy phone rendering, pause and weather controls, rainy night lighting, the five-action HUD at 568 × 320, preference restoration with a fresh adventure, and reduced motion. Unit checks cover weather timing, paused rain, bounded particles, phone particle limits, wet materials, and world-space texture scale.
+
+The environment check captures desktop and landscape-phone daylight and night scenes, then verifies rainy lighting and paused grass. Use `-- --desktop`, `-- --mobile` or `-- --reduced` to run the profiles separately. For slow headless SwiftShader environments, `SOFTWARE_RENDERING_SYNC=1 npm run test:environment` synchronizes rendered frames and lowers test pixel density to avoid a backlog of GPU commands. This option changes only the test harness and does not measure real-device frame rate.
 
 `node tests/expressions.browser.mjs` renders close-up studies of eight moods. Expression and motion unit checks cover timed reactions, candle-wish priority, pause/reset, reduced motion, bounded head tracking, frame-rate independent turns, and releasing paw gestures when walking resumes.
 

@@ -5,11 +5,13 @@ import { animateBearPose, turnBear } from './bear-motion.js';
 import { BearExpression, applyBearFace, lookAtBearTarget } from './bear-expression.js';
 import { ForestAtmosphere } from './atmosphere.js';
 import { Companion, companionStart } from './companion.js';
-import { createForestTree, treeDimensions, buildFlowerBeds, buildButterflies, updateVegetation, batchFoliageMaterial } from './vegetation.js';
+import { createForestTree, treeDimensions, buildFlowerBeds, buildButterflies, buildUnderstory, updateVegetation, batchFoliageMaterial } from './vegetation.js';
 import { ForestSky } from './sky.js';
 import { WeatherState } from './weather-state.js';
 import { ForestRain } from './rain.js';
 import { ForestSurfaces } from './forest-surfaces.js';
+import { ForestMeadow, meadowGround, meadowSpace } from './forest-floor.js';
+import { ForestSunlight } from './forest-sunlight.js';
 import { RoadLighting } from './road-lighting.js';
 import { FollowCamera } from './follow-camera.js';
 import { buildMoonNest } from './moon-nest.js';
@@ -17,7 +19,7 @@ import { MoonJourney } from './moon-journey.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { GIFTS, BUBU, START, DUDU_NEST, BUBU_NEST, MOON_NEST, WORLD_RADIUS, TRAILS, PONDS, clampZoom, isWalkable, shouldRevealBubu, canCelebrate } from './game-state.js';
 
-const COLORS={grass:0xa7bf94,edge:0x8da57a,path:0xdcc9a9,trunk:0x8c7550,leaf:0x7b9e60,darkLeaf:0x557851,lightLeaf:0xa6ba72,pink:0xdab1b0,cream:0xfff5dc,water:0x88afb2};
+const COLORS={grass:0x81984e,edge:0x657f46,path:0xcbb78e,trunk:0x806443,leaf:0x62894b,darkLeaf:0x426b49,lightLeaf:0x89a751,pink:0xdab1b0,cream:0xfff5dc,water:0x71a7a0};
 const materials=new Map();
 function mat(color, options={}) {
   const key=JSON.stringify([color,options]);
@@ -157,7 +159,7 @@ export class ForestWorld {
     this.story=state.departed?'exploring':'ready';this.storyTime=0;this.zoomView=27;this.overview=false;
     this.playing=false;this.time=0;this.walkTime=0;this.reducedMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
     this.timeOfDay='day';this.nightBlend=0;this.needsRender=false;this.treeKinds={};this.treeSizes=[];this.blossomSites=[];
-    this.scene=new THREE.Scene();this.scene.fog=new THREE.Fog(0xe9eddb,120,250);
+    this.scene=new THREE.Scene();this.scene.fog=new THREE.Fog(0xc6d3b7,30,112);
     this.sky=new ForestSky();this.weather=new WeatherState();this.surfaces=new ForestSurfaces();
     this.overheadCamera=new THREE.OrthographicCamera(-30,30,25,-25,.1,280);
     this.follow=new FollowCamera();this.camera=this.overheadCamera;this.cameraMode='third-person';this.cameraObstacles=[];
@@ -165,13 +167,13 @@ export class ForestWorld {
     this.renderer=new THREE.WebGLRenderer({antialias:true,alpha:false,powerPreference:'high-performance'});
     this.renderer.setPixelRatio(this.quality.pixelRatio);
     this.renderer.shadowMap.enabled=true;this.renderer.shadowMap.type=THREE.PCFSoftShadowMap;
-    this.renderer.outputColorSpace=THREE.SRGBColorSpace;this.renderer.toneMapping=THREE.ACESFilmicToneMapping;this.renderer.toneMappingExposure=1.08;
+    this.renderer.outputColorSpace=THREE.SRGBColorSpace;this.renderer.toneMapping=THREE.ACESFilmicToneMapping;this.renderer.toneMappingExposure=1.02;
     this.renderer.autoClear=false;
     container.appendChild(this.renderer.domElement);
-    this.ambient=new THREE.HemisphereLight(0xfff9e4,0x7c9672,1.9);this.scene.add(this.ambient);
-    const sun=new THREE.DirectionalLight(0xfff1d4,2.4);this.sunLight=sun;sun.position.set(-20,35,15);sun.castShadow=true;
-    sun.position.set(-35,65,30);sun.shadow.mapSize.set(this.quality.shadowSize,this.quality.shadowSize);sun.shadow.camera.left=-49;sun.shadow.camera.right=49;sun.shadow.camera.top=49;sun.shadow.camera.bottom=-49;sun.shadow.camera.far=150;sun.shadow.normalBias=.05;sun.shadow.bias=-.0002;sun.shadow.radius=3;this.scene.add(sun);
-    const fill=new THREE.DirectionalLight(0xf0f6d8,.6);this.fillLight=fill;fill.position.set(20,12,-20);this.scene.add(fill);
+    this.ambient=new THREE.HemisphereLight(0xeaf1df,0x496649,1.35);this.scene.add(this.ambient);
+    const sun=new THREE.DirectionalLight(0xffdf9f,3.1);this.sunLight=sun;sun.castShadow=true;
+    sun.position.set(-38,56,28);sun.shadow.mapSize.set(this.quality.shadowSize,this.quality.shadowSize);sun.shadow.camera.left=-49;sun.shadow.camera.right=49;sun.shadow.camera.top=49;sun.shadow.camera.bottom=-49;sun.shadow.camera.far=150;sun.shadow.normalBias=.035;sun.shadow.bias=-.0002;sun.shadow.radius=3;this.scene.add(sun);
+    const fill=new THREE.DirectionalLight(0xb9d6cc,.45);this.fillLight=fill;fill.position.set(20,12,-20);this.scene.add(fill);
     this.land=new THREE.Group();this.scene.add(this.land);
   }
   async initialize(progress){
@@ -232,6 +234,7 @@ export class ForestWorld {
     this.guidance=new THREE.InstancedMesh(new THREE.CircleGeometry(.13,10),new THREE.MeshBasicMaterial({color:0xc49653,transparent:true,opacity:.85,depthWrite:false}),160);
     this.guidance.count=0;this.guidance.frustumCulled=false;this.scene.add(this.guidance);
     this.atmosphere=new ForestAtmosphere(this.scene,this.blossomSites);
+    this.sunlight=new ForestSunlight(this.scene);
     this.rain=new ForestRain(this.scene,currentScreen().phone);
     this.cameraTarget=new THREE.Vector3();this.viewSize=48;this.resize();
     this.resizeObserver=new ResizeObserver(()=>this.resize());this.resizeObserver.observe(this.container);
@@ -248,12 +251,9 @@ export class ForestWorld {
   buildGround() {
     const soil=cylinder(this.land,0xb1b384,0,-1.13,0,40,38.4,2.6,96);soil.receiveShadow=true;
     cylinder(this.land,COLORS.edge,0,-.15,0,40.18,40,.62,96);
-    const geo=new THREE.CircleGeometry(40.2,112);geo.rotateX(-Math.PI/2);
-    const ground=mesh(geo,COLORS.grass,this.land,0,.18,0);ground.castShadow=false;this.surfaces.apply(ground);
+    const ground=mesh(meadowGround(),0xffffff,this.land,0,.18,0);ground.castShadow=false;this.surfaces.apply(ground);
     // A soft outer ground catches the island's shadow and blends into the page.
     const floor=new THREE.Mesh(new THREE.PlaneGeometry(300,300),new THREE.ShadowMaterial({color:0x344837,opacity:.13}));floor.position.y=-2.6;floor.rotation.x=-Math.PI/2;floor.receiveShadow=true;this.scene.add(floor);
-    const patches=[[-14,6,5,3,0xb7c68a],[7,10,6,5,0xc1cc90],[6,-12,7,5,0xacc180],[-7,-12,4,5,0xaabd7a],[13,-4,4,6,0xbdcd8a],[-23,19,10,7,0xc3cc8e],[22,-18,9,9,0xadbf7c],[26,6,8,8,0xc3ce93],[-25,-17,8,8,0xaabb80],[-17,0,9,9,0xb7c688],[5,28,10,8,0xc3cd94]];
-    patches.forEach(([x,z,sx,sz,color])=>{const p=mesh(new THREE.CircleGeometry(1,30),color,this.land,x,.187,z,[sx,sz,1]);p.rotation.x=-Math.PI/2;p.castShadow=false;this.surfaces.apply(p);});
   }
   path(points,width=1.9) {
     const curve=new THREE.CatmullRomCurve3(points.map(([x,z])=>new THREE.Vector3(x,.215,z)));
@@ -294,7 +294,7 @@ export class ForestWorld {
   }
   tree(x,z,size=1,type='round',color) {
     const kind=color===COLORS.pink?'blossom':type==='round'?'oak':type;
-    const palette={blossom:0x88a769,umbrella:0xa2b969,willow:0x91ae70,birch:0xa4bb79,oak:color||COLORS.leaf,pine:color||COLORS.darkLeaf};
+    const palette={blossom:0x718f4e,umbrella:0x829b49,willow:0x718f58,birch:0x8aa65e,oak:color||COLORS.leaf,pine:color||COLORS.darkLeaf};
     const seed=Math.round(x*173+z*367+42000),group=createForestTree(kind,palette[kind],seed,this.quality.foliageDetail),dimensions=treeDimensions(kind,size,seed);
     group.position.set(x,.18,z);group.rotation.y=rand()*6.28;group.scale.set(dimensions.width,dimensions.height,dimensions.width);this.land.add(group);
     group.updateWorldMatrix(true,true);
@@ -351,23 +351,20 @@ export class ForestWorld {
     }
   }
   buildDetails() {
-    const groundGeometry=[], flowerGeometry=[], yellowGeometry=[], pinkGeometry=[];
+    this.meadow=new ForestMeadow(this.scene,currentScreen().phone);
+    this.understory=buildUnderstory(this.land,this.treeSizes,this.quality.foliageDetail);
+    const flowerGeometry=[], yellowGeometry=[], pinkGeometry=[];
     const addMerged=(geo,x,y,z,scale,arr)=>{const g=geo.clone();g.scale(...scale);g.translate(x,y,z);arr.push(g);};
     for(let i=0;i<this.quality.groundDetails;i++){
       const a=rand()*Math.PI*2,r=Math.sqrt(rand())*39,x=Math.cos(a)*r,z=Math.sin(a)*r;
-      if(PONDS.some(p=>((x-p.x)/5.6)**2+((z-p.z)/4.1)**2<1)||Math.hypot(x-BUBU.x,z-BUBU.z)<3||[DUDU_NEST,BUBU_NEST].some(n=>Math.hypot(x-n.x,z-n.z)<3))continue;
-      if(PATH_POINTS.some(([px,pz])=>Math.hypot(x-px,z-pz)<1.6))continue;
-      const h=.11+rand()*.2;
-      if(i%3===0){
-        const cone=new THREE.ConeGeometry(.05,h,3);addMerged(cone,x,.2+h/2,z,[1,1,1],groundGeometry);
-        addMerged(cone,x+.08,.2+h/2,z+.04,[1,.7,1],groundGeometry);
-      }else{
+      if(!meadowSpace(x,z,.2))continue;
+      if(i%3!==0){
         const target=i%4===0?pinkGeometry:i%3===1?yellowGeometry:flowerGeometry;
         addMerged(petalGeo,x,.28,z,[.065,.045,.065],target);
         for(let j=0;j<4;j++)addMerged(petalGeo,x+Math.cos(j*Math.PI/2)*.07,.28,z+Math.sin(j*Math.PI/2)*.07,[.055,.035,.055],target);
       }
     }
-    [[groundGeometry,0x869e61],[flowerGeometry,0xf0ebc9],[yellowGeometry,0xe2c367],[pinkGeometry,0xd8acb0]].forEach(([geos,color])=>{
+    [[flowerGeometry,0xfff3db],[yellowGeometry,0xeac76c],[pinkGeometry,0xe9aabc]].forEach(([geos,color])=>{
       if(!geos.length)return;const m=mesh(mergeGeometries(geos),color,this.land);m.castShadow=false;geos.forEach(g=>g.dispose());
     });
     for(let i=0;i<38;i++){
@@ -547,10 +544,10 @@ export class ForestWorld {
     else{this.nightBlend=THREE.MathUtils.lerp(this.nightBlend,target,1-Math.exp(-3*dt));if(Math.abs(this.nightBlend-target)<.002)this.nightBlend=target;}
     this.weather.update(dt);
     const n=this.nightBlend,rain=this.weather.blend;
-    this.ambient.color.setHex(0xfff9e4).lerp(new THREE.Color(0x819ac7),n);this.ambient.groundColor.setHex(0x7c9672).lerp(new THREE.Color(0x34466b),n);this.ambient.intensity=1.9-n*1.05;
-    this.sunLight.color.setHex(0xfff1d4).lerp(new THREE.Color(0x9fbbe9),n);this.sunLight.intensity=2.4-n*1.94;
-    this.fillLight.color.setHex(0xf0f6d8).lerp(new THREE.Color(0x8b92c8),n);this.fillLight.intensity=.6-n*.27;
-    this.scene.fog.color.setHex(0xe9eddb).lerp(new THREE.Color(0x1c2d49),n);
+    this.ambient.color.setHex(0xeaf1df).lerp(new THREE.Color(0x819ac7),n);this.ambient.groundColor.setHex(0x496649).lerp(new THREE.Color(0x34466b),n);this.ambient.intensity=1.35-n*.5;
+    this.sunLight.color.setHex(0xffdf9f).lerp(new THREE.Color(0x9fbbe9),n);this.sunLight.intensity=3.1-n*2.64;
+    this.fillLight.color.setHex(0xb9d6cc).lerp(new THREE.Color(0x8b92c8),n);this.fillLight.intensity=.45-n*.12;
+    this.scene.fog.color.setHex(0xc6d3b7).lerp(new THREE.Color(0x1c2d49),n);
     // Overcast light stays soft and readable, including on white Bubu.
     this.ambient.color.lerp(new THREE.Color(0xd2dfe4).lerp(new THREE.Color(0x8294b7),n),rain*.8);
     this.ambient.intensity*=1-rain*.08;
@@ -566,22 +563,23 @@ export class ForestWorld {
   }
   batchStaticGeometry(){
     // Render the stationary forest in material batches instead of hundreds of draws.
-    this.land.updateWorldMatrix(true,true);const batches=new Map();
+    this.land.updateWorldMatrix(true,true);const batches=new Map();this.canopyBatches=[];
     this.land.traverse(node=>{
       if(!node.isMesh||Array.isArray(node.material))return;
       let ancestor=node;while(ancestor){if(ancestor.userData.dynamic)return;ancestor=ancestor.parent;}
       // Small spatial batches let the camera cull trees outside its view.
       const e=node.matrixWorld.elements,cell=`${Math.floor(e[12]/16)},${Math.floor(e[14]/16)}`;
       const foliage=node.material.userData.forestLeaf;
-      const material=foliage?batchFoliageMaterial():node.material;
+      const material=foliage?batchFoliageMaterial(node.material.userData.forestCanopy):node.material;
       const geometry=node.geometry.clone().applyMatrix4(node.matrixWorld);
       if(foliage){
         const color=node.material.color,colors=new Float32Array(geometry.attributes.position.count*3);
         for(let i=0;i<colors.length;i+=3){colors[i]=color.r;colors[i+1]=color.g;colors[i+2]=color.b;}
         geometry.setAttribute('color',new THREE.BufferAttribute(colors,3));
       }
-      const key=`${cell}-${material.uuid}-${node.castShadow}-${Object.keys(geometry.attributes).sort().join(',')}`;
-      if(!batches.has(key))batches.set(key,{material,cast:node.castShadow,geometries:[],nodes:[]});
+      const detail=!!node.userData.canopyDetail;
+      const key=`${cell}-${material.uuid}-${node.castShadow}-${detail}-${Object.keys(geometry.attributes).sort().join(',')}`;
+      if(!batches.has(key))batches.set(key,{material,cast:node.castShadow,detail,geometries:[],nodes:[]});
       const batch=batches.get(key);
       // Geometry sources use mixed index types; normalize before merging.
       if(geometry.index){batch.geometries.push(geometry.toNonIndexed());geometry.dispose();}
@@ -592,6 +590,7 @@ export class ForestWorld {
       const geometry=mergeGeometries(batch.geometries);if(!geometry)continue;
       geometry.computeBoundingSphere();
       const combined=new THREE.Mesh(geometry,batch.material);combined.castShadow=batch.cast;combined.receiveShadow=true;this.scene.add(combined);
+      if(batch.detail)this.canopyBatches.push(combined);
       batch.nodes.forEach(node=>node.removeFromParent());batch.geometries.forEach(geo=>geo.dispose());
     }
   }
@@ -755,6 +754,13 @@ export class ForestWorld {
     // Pausing must also preserve the bears' elevated positions in the nest.
     else if(this.story==='moon')this.updateMoonJourney(0);
     this.updateLighting(paused?0:dt);
+    const detail=this.thirdPerson||(this.playing&&!this.overview&&this.zoomView<40);
+    this.meadow.update(t,this.reducedMotion,this.weather.blend,this.state.position,detail);
+    for(const canopy of this.canopyBatches){
+      const bounds=canopy.geometry.boundingSphere;
+      canopy.visible=detail&&Math.hypot(bounds.center.x-this.state.position.x,bounds.center.z-this.state.position.z)<34+bounds.radius;
+    }
+    this.sunlight.update(t,this.nightBlend,this.weather.blend,this.reducedMotion);
     [this.dudu,this.bubu].forEach(bear=>animateBearFace(bear,t,false,this.reducedMotion));
     this.atmosphere.update(paused?0:dt,this.time,this.playing?this.state.position:{x:0,z:0},this.reducedMotion,this.nightBlend,this.weather.blend);
     this.rain.update(this.weather,this.playing?this.state.position:{x:0,z:0},this.nightBlend,this.reducedMotion);
