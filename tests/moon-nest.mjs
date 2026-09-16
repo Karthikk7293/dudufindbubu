@@ -8,16 +8,6 @@ const errors=[];
 const ready=async page=>{await page.waitForFunction(()=>window.__dudu?.snapshot().ready||document.querySelector('#loading.has-error'));assert.equal(await page.locator('#loading.has-error').count(),0,errors.join('\n'));await page.waitForSelector('#loading',{state:'hidden'});};
 let page;
 try{
-  for(const viewport of [{width:390,height:844},{width:844,height:390}]){
-    const phone=await browser.newPage({viewport,isMobile:true,hasTouch:true});const gameRequests=[];
-    phone.on('request',request=>{if(/\/src\/(main|world)\.js|\/three/.test(request.url()))gameRequests.push(request.url());});
-    await phone.goto(url);await phone.waitForSelector('#mobile-notice');
-    assert.match(await phone.locator('#mobile-notice').textContent(),/Mobile screens aren’t supported yet/);
-    assert.equal(await phone.locator('#world canvas').count(),0);assert.deepEqual(gameRequests,[]);
-    assert.equal(await phone.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
-    await phone.screenshot({path:`test-results/mobile-not-supported-${viewport.width}.png`});await phone.close();
-  }
-  console.log('Phones show the coming-soon message in both orientations without loading the game.');
   page=await browser.newPage({viewport:{width:1100,height:780},deviceScaleFactor:1});page.setDefaultTimeout(150000);page.on('pageerror',error=>errors.push(error.message));
   const fixture={...freshState(),collected:GIFTS.map(g=>g.id),completed:true,departed:true,bubuArrived:true,position:{...MOON_NEST.entry},companionPosition:{x:-15,z:-24}};
   await page.addInitScript(fixture=>{if(!sessionStorage.getItem('moon-seeded')){window.__DUDU_TEST_STATE__=fixture;sessionStorage.setItem('moon-seeded','true');}localStorage.setItem('dudu-sound','off');localStorage.setItem('dudu-time-of-day','day');},fixture);
@@ -57,13 +47,14 @@ try{
   await page.waitForFunction(()=>window.__dudu.snapshot().moonJourney?.phase==='climbing');
   await page.locator('#play-pause').click();await page.locator('#restart-button').click();
   await page.waitForFunction(()=>window.__dudu.snapshot().state.departed);s=await snapshot();assert.equal(s.moonJourney,null);assert.equal(s.bubuVisible,false);assert.equal(s.state.completed,false);assert.equal(s.state.collected.length,0);assert.ok(s.duduPosition.y<.5);
-  await page.setViewportSize({width:700,height:780});await page.waitForSelector('#mobile-notice');const frozenTime=(await snapshot()).time;await page.evaluate(()=>new Promise(resolve=>setTimeout(resolve,300)));assert.equal((await snapshot()).time,frozenTime);
-  await page.setViewportSize({width:1100,height:780});await page.waitForSelector('#pause-dialog[open]');assert.equal(await page.locator('#mobile-notice').isVisible(),false);
-  console.log('Descent, companion walking, restart during a climb and resizing the desktop support gate passed.');
+  await page.setViewportSize({width:700,height:780});
+  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
+  await page.setViewportSize({width:1100,height:780});
+  console.log('Descent, companion walking, restart during a climb and desktop resize passed.');
   await page.close();
   const tablet=await browser.newPage({viewport:{width:768,height:1024},deviceScaleFactor:1,isMobile:true,hasTouch:true});tablet.setDefaultTimeout(150000);tablet.on('pageerror',error=>errors.push(error.message));
   await tablet.addInitScript(()=>localStorage.setItem('dudu-sound','off'));await tablet.goto(url,{waitUntil:'domcontentloaded'});await ready(tablet);await tablet.locator('#start-button').tap();await tablet.waitForFunction(()=>window.__dudu.snapshot().state.departed);
-  assert.equal(await tablet.locator('#mobile-notice').isVisible(),false);assert.equal(await tablet.locator('#touch-controls').isVisible(),true);
+assert.equal(await tablet.locator('#touch-controls').isVisible(),true);
   const guide=await tablet.locator('#guide-button').boundingBox(),controls=await tablet.locator('#play-tools').boundingBox();assert.ok(guide.x+guide.width<controls.x);
   assert.equal(await tablet.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);await tablet.screenshot({path:'test-results/tablet-forest-proportions.png'});
   await tablet.close();assert.deepEqual(errors,[]);console.log('Tablet portrait play and controls render without overflow or browser errors.');

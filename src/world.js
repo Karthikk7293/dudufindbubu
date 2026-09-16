@@ -1,7 +1,10 @@
 import * as THREE from 'three';
+import { currentScreen, forestQuality } from './screen-support.js';
+import { createAnimal, updateAnimal } from './wildlife.js';
+import { animateBearPose } from './bear-motion.js';
 import { ForestAtmosphere } from './atmosphere.js';
 import { Companion, companionStart } from './companion.js';
-import { createForestTree, treeDimensions, buildFlowerBeds, buildButterflies, updateVegetation } from './vegetation.js';
+import { createForestTree, treeDimensions, buildFlowerBeds, buildButterflies, updateVegetation, batchFoliageMaterial } from './vegetation.js';
 import { ForestSky } from './sky.js';
 import { RoadLighting } from './road-lighting.js';
 import { FollowCamera } from './follow-camera.js';
@@ -66,16 +69,20 @@ export function createBear(white=false) {
   // Project the low-set face onto the head so its details sit on the plush,
   // including when the bears turn sideways in the forest.
   const faceZ=(x,y)=>.69*Math.max(.01,1-Math.abs(x/.96)**(2/.88)-Math.abs(y/.79)**(2/.88))**(.88/2);
-  const eyes=[],happyEyes=[];
+  const eyes=[],happyEyes=[],ears=[];let pack;
   [-1,1].forEach(side=>{
-    plush(head,white?dark:fur,side*.68,.61,-.06,.225,.23,.17);
-    plush(head,white?0x6c4c3d:0x805236,side*.68,.61,.112,.137,.146,.025);
+    const ear=new THREE.Group();ear.position.set(side*.68,.61,-.06);head.add(ear);ears.push(ear);
+    plush(ear,white?dark:fur,0,0,0,.225,.23,.17);
+    plush(ear,white?0x6c4c3d:0x805236,0,0,.172,.137,.146,.025);
     const eye=ball(head,0x2f211f,side*.23,-.285,faceZ(side*.23,-.285)+.012,.060,.072,.029);eye.name='button-eye';eyes.push(eye);
+    ball(eye,0xfff9ec,-.22,.27,.87,.20,.17,.14);
     const happy=line(head,[[side*.23-.07,-.292,faceZ(side*.23-.07,-.292)+.025],[side*.23,-.26,faceZ(side*.23,-.26)+.026],[side*.23+.07,-.292,faceZ(side*.23+.07,-.292)+.025]],0x382720,.018);happy.visible=false;happyEyes.push(happy);
     const cheek=plush(head,blush,side*.52,-.405,faceZ(side*.52,-.405)+.018,.158,.155,.03);cheek.rotation.y=side*.25;cheek.rotation.x=.18;
   });
+  plush(head,white?0xfff6e8:0xd9a46e,0,-.39,.643,.15,.098,.070);
+  ball(head,dark,0,-.365,.716,.039,.029,.023);
   const smilePoints=[[-.076,-.385],[-.061,-.43],[-.025,-.432],[0,-.405],[.025,-.432],[.061,-.43],[.076,-.385]];
-  line(head,smilePoints.map(([x,y])=>[x,y,faceZ(x,y)+.025]),0x382720,.017);
+  line(head,smilePoints.map(([x,y])=>[x,y,faceZ(x,y)+.075]),0x382720,.017);
   // Small plush tufts with the blue/red bands visible in the reference.
   const tuft=new THREE.Group();tuft.position.set(0,.775,-.02);head.add(tuft);
   cylinder(tuft,white?0x9d5b57:0x4b798b,0,.04,0,.087,.087,.055,16);
@@ -99,7 +106,7 @@ export function createBear(white=false) {
     plush(bow,0x382821,0,0,.04,.065,.065,.045);
   }else{
     // Keep Dudu's working gift bag and add the reel's little white-bear charm.
-    plush(body,0x859165,0,.76,-.49,.46,.43,.26);
+    pack=plush(body,0x859165,0,.76,-.49,.46,.43,.26);
     box(body,0xa1a276,0,1.08,-.72,.65,.10,.12);
     plush(body,0x9da173,0,.64,-.73,.31,.20,.045);
     box(body,0xc3b085,0,.85,-.786,.10,.17,.028);
@@ -110,7 +117,7 @@ export function createBear(white=false) {
     [-1,1].forEach(side=>{plush(charm,0xfff7e9,side*.10,.29,.012,.045);plush(charm,0xfff7e9,side*.108,.085,0,.044,.075,.04);plush(charm,0xfff7e9,side*.052,-.088,.02,.046,.064,.045);ball(charm,dark,side*.043,.21,.087,.012);});
     ball(charm,dark,0,.17,.09,.017,.012,.008);
   }
-  root.userData={body,head,arms,legs,eyes,happyEyes,blinkOffset:white?2.2:0};return root;
+  root.userData={body,head,arms,legs,eyes,happyEyes,ears,pack,blinkOffset:white?2.2:0};return root;
 }
 
 export function animateBearFace(bear,time,happy=false,reducedMotion=false){
@@ -136,6 +143,7 @@ function createGift(color) {
 
 export class ForestWorld {
   constructor(container, state) {
+    this.quality=forestQuality(currentScreen().phone,devicePixelRatio);
     this.container=container;this.state=state;this.obstacles=[];this.gifts=new Map();this.butterflies=[];this.floaties=[];this.flowers=[];this.animals=[];this.balloons=[];this.ducks=[];this.events=[];
     this.story=state.departed?'exploring':'ready';this.storyTime=0;this.zoomView=27;this.overview=false;
     this.playing=false;this.time=0;this.walkTime=0;this.reducedMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -146,14 +154,14 @@ export class ForestWorld {
     this.follow=new FollowCamera();this.camera=this.overheadCamera;this.cameraMode='third-person';this.cameraObstacles=[];
     this.moonCamera=new THREE.PerspectiveCamera(54,1,.08,180);this.moonLook=new THREE.Vector3();this.moonJourney=null;
     this.renderer=new THREE.WebGLRenderer({antialias:true,alpha:false,powerPreference:'high-performance'});
-    this.renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));
+    this.renderer.setPixelRatio(this.quality.pixelRatio);
     this.renderer.shadowMap.enabled=true;this.renderer.shadowMap.type=THREE.PCFSoftShadowMap;
     this.renderer.outputColorSpace=THREE.SRGBColorSpace;this.renderer.toneMapping=THREE.ACESFilmicToneMapping;this.renderer.toneMappingExposure=1.08;
     this.renderer.autoClear=false;
     container.appendChild(this.renderer.domElement);
     this.ambient=new THREE.HemisphereLight(0xfff9e4,0x7c9672,1.9);this.scene.add(this.ambient);
     const sun=new THREE.DirectionalLight(0xfff1d4,2.4);this.sunLight=sun;sun.position.set(-20,35,15);sun.castShadow=true;
-    sun.position.set(-35,65,30);sun.shadow.mapSize.set(2048,2048);sun.shadow.camera.left=-49;sun.shadow.camera.right=49;sun.shadow.camera.top=49;sun.shadow.camera.bottom=-49;sun.shadow.camera.far=150;sun.shadow.normalBias=.05;sun.shadow.bias=-.0002;sun.shadow.radius=3;this.scene.add(sun);
+    sun.position.set(-35,65,30);sun.shadow.mapSize.set(this.quality.shadowSize,this.quality.shadowSize);sun.shadow.camera.left=-49;sun.shadow.camera.right=49;sun.shadow.camera.top=49;sun.shadow.camera.bottom=-49;sun.shadow.camera.far=150;sun.shadow.normalBias=.05;sun.shadow.bias=-.0002;sun.shadow.radius=3;this.scene.add(sun);
     const fill=new THREE.DirectionalLight(0xf0f6d8,.6);this.fillLight=fill;fill.position.set(20,12,-20);this.scene.add(fill);
     this.land=new THREE.Group();this.scene.add(this.land);
   }
@@ -172,6 +180,7 @@ export class ForestWorld {
     this.flowerBeds=buildFlowerBeds(this.land,this.obstacles);this.butterflies=buildButterflies(this.scene,this.flowerBeds.beds);
     await progress(72,'Wrapping presents and lighting the lanterns…');
     this.roadLighting=new RoadLighting(this.scene,this.land,this.obstacles);
+    this.roadLighting.sites.forEach(site=>this.cameraObstacles.push({...site,minY:.2,maxY:3.4,radius:.22}));
     // New roadside posts may occupy an old save's exact position. Move only to
     // the closest free patch, preserving the player's gifts and story progress.
     if(!isWalkable(state.position.x,state.position.z,this.obstacles)){
@@ -260,7 +269,7 @@ export class ForestWorld {
   tree(x,z,size=1,type='round',color) {
     const kind=color===COLORS.pink?'blossom':type==='round'?'oak':type;
     const palette={blossom:0x88a769,umbrella:0xa2b969,willow:0x91ae70,birch:0xa4bb79,oak:color||COLORS.leaf,pine:color||COLORS.darkLeaf};
-    const seed=Math.round(x*173+z*367+42000),group=createForestTree(kind,palette[kind],seed),dimensions=treeDimensions(kind,size,seed);
+    const seed=Math.round(x*173+z*367+42000),group=createForestTree(kind,palette[kind],seed,this.quality.foliageDetail),dimensions=treeDimensions(kind,size,seed);
     group.position.set(x,.18,z);group.rotation.y=rand()*6.28;group.scale.set(dimensions.width,dimensions.height,dimensions.width);this.land.add(group);
     group.updateWorldMatrix(true,true);
     const bounds=new THREE.Box3().setFromObject(group);
@@ -318,7 +327,7 @@ export class ForestWorld {
   buildDetails() {
     const groundGeometry=[], flowerGeometry=[], yellowGeometry=[], pinkGeometry=[];
     const addMerged=(geo,x,y,z,scale,arr)=>{const g=geo.clone();g.scale(...scale);g.translate(x,y,z);arr.push(g);};
-    for(let i=0;i<1800;i++){
+    for(let i=0;i<this.quality.groundDetails;i++){
       const a=rand()*Math.PI*2,r=Math.sqrt(rand())*39,x=Math.cos(a)*r,z=Math.sin(a)*r;
       if(PONDS.some(p=>((x-p.x)/5.6)**2+((z-p.z)/4.1)**2<1)||Math.hypot(x-BUBU.x,z-BUBU.z)<3||[DUDU_NEST,BUBU_NEST].some(n=>Math.hypot(x-n.x,z-n.z)<3))continue;
       if(PATH_POINTS.some(([px,pz])=>Math.hypot(x-px,z-pz)<1.6))continue;
@@ -352,6 +361,7 @@ export class ForestWorld {
     this.confetti=[];
   }
   sign(x,z,text,rotation=0) {
+    for(const offset of [-.7,0,.7])this.cameraObstacles.push({x:x+Math.cos(rotation)*offset,y:1.55,z:z-Math.sin(rotation)*offset,radius:.4});
     const group=new THREE.Group();group.position.set(x,.2,z);group.rotation.y=rotation;this.land.add(group);
     cylinder(group,0x9e815a,0,.7,0,.06,.08,1.4);
     const canvas=document.createElement('canvas');canvas.width=512;canvas.height=128;const ctx=canvas.getContext('2d');
@@ -407,54 +417,16 @@ export class ForestWorld {
     this.bubuNest=makeNest(BUBU_NEST,'BUBU’S NEST',true);
   }
   buildFields(){
-    const animalGeometry=new THREE.SphereGeometry(1,10,7);
-    const soft=(parent,color,x,y,z,sx,sy=sx,sz=sx)=>mesh(animalGeometry,color,parent,x,y,z,[sx,sy,sz]);
-    const addAnimal=(kind,x,z,index)=>{
-      const group=new THREE.Group(),body=new THREE.Group();group.add(body);group.position.set(x,.22,z);group.userData.dynamic=true;this.scene.add(group);
-      const legs=[];
-      if(kind==='rabbit'){
-        soft(body,0xf5ecdc,0,.48,0,.35,.45,.44);soft(body,0xf5ecdc,0,.86,.25,.3,.29,.29);
-        [-1,1].forEach(side=>{const ear=soft(body,0xf5ecdc,side*.14,1.25,.24,.085,.4,.085);ear.rotation.z=-side*.14;soft(body,0xd6aa9f,side*.14,1.29,.31,.038,.24,.025);soft(body,0x4c4637,side*.13,.9,.5,.03);soft(body,0xf5ecdc,side*.21,.18,.22,.18,.15,.26);});
-        soft(body,0xd9a79f,0,.78,.54,.045);soft(body,0xfff7e5,0,.38,-.43,.18);
-      }else if(kind==='sheep'){
-        // A round face with a soft muzzle and sideways ears reads as a lamb,
-        // instead of sharing the deer's long head and upright ears.
-        ball(body,0xf3efdf,0,.85,0,.53,.45,.73);
-        for(let i=0;i<11;i++)ball(body,0xf7f2e5,Math.sin(i*2.4)*.36,1+Math.cos(i*2)*.17,Math.cos(i*2.4)*.49,.29,.28,.3);
-        const face=new THREE.Group();face.position.set(0,1.18,.65);body.add(face);
-        ball(face,0xb2a58b,0,0,0,.34,.32,.29);
-        [-1,1].forEach(side=>{
-          const ear=ball(face,0xb2a58b,side*.39,.07,-.015,.23,.11,.105);ear.rotation.z=side*.22;
-          const inner=ball(face,0xd8b4a8,side*.41,.085,.06,.14,.055,.03);inner.rotation.z=side*.22;
-          ball(face,0x443e35,side*.135,.035,.264,.038,.047,.025);
-          ball(face,0xfff9e9,side*.135-.009,.05,.285,.012);
-          ball(face,0xddb4a3,side*.22,-.08,.236,.064,.035,.02);
-          ball(face,0xe5d6ba,side*.077,-.135,.26,.115,.088,.068);
-          line(face,[[0,-.135,.333],[side*.035,-.178,.325],[side*.082,-.157,.324]],0x6f5a48,.012);
-        });
-        ball(face,0x6f5a48,0,-.105,.329,.044,.028,.024);
-        [-1,0,1].forEach(i=>ball(face,0xf9f4e7,i*.17,.25-Math.abs(i)*.04,.055,.17,.145,.2));
-        ball(body,0xf9f4e7,0,.93,-.75,.17);
-        for(const side of [-1,1])for(const end of [-1,1]){const leg=new THREE.Group();leg.position.set(side*.32,.62,end*.42);body.add(leg);cylinder(leg,0xb2a58b,0,-.25,0,.078,.078,.5,8);ball(leg,0x827561,0,-.49,.025,.095,.075,.11);legs.push(leg);}
-      }else{
-        const fox=kind==='fox',fur=fox?0xc48a58:0xbda178;
-        soft(body,fur,0,.85,0,.49,.43,.72);
-        soft(body,fur,0,fox?1.12:1.38,.59,.29,fox?.28:.36,.35);
-        soft(body,0xf0dfbc,0,fox?1:1.25,.88,.2,.13,.19);
-        [-1,1].forEach(side=>{soft(body,fur,side*.28,fox?1.39:1.65,.54,.11,.2,.11);soft(body,0x433f33,side*.2,fox?1.15:1.43,.82,.037);});
-        soft(body,0x514838,0,fox?1.04:1.31,1.03,.067,.05,.04);
-        for(const side of [-1,1])for(const end of [-1,1]){const leg=new THREE.Group();leg.position.set(side*.32,.65,end*.42);body.add(leg);cylinder(leg,0x9c7f58,0,-.3,0,.068,.075,.6,6);legs.push(leg);}
-        if(fox){const tail=soft(body,fur,0,.84,-.86,.22,.24,.54);tail.rotation.x=.35;soft(body,0xf7ead0,0,1,-1.28,.2,.2,.24);}
-        else{[-1,1].forEach(side=>{line(body,[[side*.16,1.65,.58],[side*.24,2.05,.53],[side*.39,2.2,.58]],0x8a7654,.035);line(body,[[side*.23,1.98,.53],[side*.08,2.16,.47]],0x8a7654,.026);});soft(body,0xf4e6c8,0,.98,-.72,.12,.2,.16);}
+    [['rabbit',-18,21],['rabbit',-20,17],['rabbit',-24,21],['rabbit',-12,26],['deer',18,-18],['deer',22,-20],['deer',25,-16],['fox',-26,-9],['fox',-23,-11],['sheep',7,24],['sheep',10,24],['sheep',12,21],['sheep',3,26],['rabbit',29,2],['rabbit',25,4],['fox',-17,-24]].forEach(([kind,x,z],i)=>{
+      let spawn={x,z};
+      if(!isWalkable(x,z,this.obstacles)){
+        search:for(let r=.4;r<=2;r+=.4)for(let j=0;j<12;j++){
+          const nx=x+Math.sin(j*Math.PI/6)*r,nz=z+Math.cos(j*Math.PI/6)*r;
+          if(isWalkable(nx,nz,this.obstacles)){spawn={x:nx,z:nz};break search;}
+        }
       }
-      // Keep the smaller wildlife in proportion to Dudu in the close camera.
-      group.traverse(node=>{if(node.isMesh)node.castShadow=false;});
-      group.scale.setScalar({rabbit:.6,fox:.72,sheep:.85,deer:1}[kind]);
-      group.updateWorldMatrix(true,true);
-      group.position.y+=.19-new THREE.Box3().setFromObject(group).min.y;
-      this.animals.push({kind,group,body,legs,x,z,groundY:group.position.y,phase:index*1.7,speed:kind==='rabbit'?.42:.2});
-    };
-    [['rabbit',-18,21],['rabbit',-20,17],['rabbit',-24,21],['rabbit',-12,26],['deer',18,-18],['deer',22,-20],['deer',25,-16],['fox',-26,-9],['fox',-23,-11],['sheep',7,24],['sheep',10,24],['sheep',12,21],['sheep',3,26],['rabbit',29,2],['rabbit',25,4],['fox',-17,-24]].forEach(([kind,x,z],i)=>addAnimal(kind,x,z,i));
+      const animal=createAnimal(kind,spawn.x,spawn.z,i);this.animals.push(animal);this.scene.add(animal.group);
+    });
     const heart=new THREE.Shape();heart.moveTo(0,.45);heart.bezierCurveTo(-.75,1.3,-1.5,.2,0,-.8);heart.bezierCurveTo(1.5,.2,.75,1.3,0,.45);
     const heartGeometry=new THREE.ExtrudeGeometry(heart,{depth:.12,bevelEnabled:true,bevelSegments:2,steps:1,bevelSize:.12,bevelThickness:.13,curveSegments:10});
     const locations=[[-10,32],[-2,34],[-21,23],[-25,18],[27,10],[30,5],[27,1],[25,7],[3,-26],[10,-26],[3,-30],[10,-31],[-24,-20],[19,26]];
@@ -559,14 +531,27 @@ export class ForestWorld {
     this.land.traverse(node=>{
       if(!node.isMesh||Array.isArray(node.material))return;
       let ancestor=node;while(ancestor){if(ancestor.userData.dynamic)return;ancestor=ancestor.parent;}
-      const key=`${node.material.uuid}-${node.castShadow}-${Object.keys(node.geometry.attributes).sort().join(',')}`;
-      if(!batches.has(key))batches.set(key,{material:node.material,cast:node.castShadow,geometries:[],nodes:[]});
-      const batch=batches.get(key),geometry=node.geometry.clone().applyMatrix4(node.matrixWorld);
+      // Small spatial batches let the camera cull trees outside its view.
+      const e=node.matrixWorld.elements,cell=`${Math.floor(e[12]/16)},${Math.floor(e[14]/16)}`;
+      const foliage=node.material.userData.forestLeaf;
+      const material=foliage?batchFoliageMaterial():node.material;
+      const geometry=node.geometry.clone().applyMatrix4(node.matrixWorld);
+      if(foliage){
+        const color=node.material.color,colors=new Float32Array(geometry.attributes.position.count*3);
+        for(let i=0;i<colors.length;i+=3){colors[i]=color.r;colors[i+1]=color.g;colors[i+2]=color.b;}
+        geometry.setAttribute('color',new THREE.BufferAttribute(colors,3));
+      }
+      const key=`${cell}-${material.uuid}-${node.castShadow}-${Object.keys(geometry.attributes).sort().join(',')}`;
+      if(!batches.has(key))batches.set(key,{material,cast:node.castShadow,geometries:[],nodes:[]});
+      const batch=batches.get(key);
       // Geometry sources use mixed index types; normalize before merging.
-      batch.geometries.push(geometry.index?geometry.toNonIndexed():geometry);batch.nodes.push(node);
+      if(geometry.index){batch.geometries.push(geometry.toNonIndexed());geometry.dispose();}
+      else batch.geometries.push(geometry);
+      batch.nodes.push(node);
     });
     for(const batch of batches.values()){
       const geometry=mergeGeometries(batch.geometries);if(!geometry)continue;
+      geometry.computeBoundingSphere();
       const combined=new THREE.Mesh(geometry,batch.material);combined.castShadow=batch.cast;combined.receiveShadow=true;this.scene.add(combined);
       batch.nodes.forEach(node=>node.removeFromParent());batch.geometries.forEach(geo=>geo.dispose());
     }
@@ -620,10 +605,7 @@ export class ForestWorld {
     const {moving,dx,dz}=this.companion.update(dt,this.state.position),pos=this.companion.position;
     this.bubu.position.set(pos.x,PONDS.some(p=>Math.abs(pos.z-p.z)<1&&Math.abs(pos.x-p.x)<5.6)?.48:.23,pos.z);
     if(moving){const angle=Math.atan2(dx,dz),diff=Math.atan2(Math.sin(angle-this.bubu.rotation.y),Math.cos(angle-this.bubu.rotation.y));this.bubu.rotation.y+=diff*Math.min(1,dt*12);}
-    const {body,legs,arms}=this.bubu.userData,cycle=this.time*10;
-    body.position.y=moving?Math.abs(Math.sin(cycle))*.08:0;
-    legs.forEach((leg,i)=>leg.rotation.x=moving?Math.sin(cycle+i*Math.PI)*.5:0);
-    arms.forEach((arm,i)=>{arm.rotation.z=0;arm.rotation.x=moving?-Math.sin(cycle+i*Math.PI)*.3:0;});
+    animateBearPose(this.bubu,dt,this.time,moving,this.reducedMotion);
     this.state.companionPosition={...pos};
   }
   showGuidance(path){
@@ -643,7 +625,7 @@ export class ForestWorld {
     this.raycaster.setFromCamera(this.pointer,this.camera);if(this.raycaster.ray.direction.y>=-.015)return null;const hit=new THREE.Vector3();return this.raycaster.ray.intersectPlane(this.groundPlane,hit)?{x:hit.x,z:hit.z}:null;
   }
   mark(point){this.clickMarker.position.set(point.x,.3,point.z);this.clickMarker.visible=true;this.markerTime=this.time;}
-  resize(){this.width=this.container.clientWidth;this.height=this.container.clientHeight;this.mobile=this.width<760;this.renderer.setSize(this.width,this.height);this.sky.resize(this.width,this.height);this.follow.resize(this.width/this.height);this.setCamera(true);}
+  resize(){this.width=Math.max(1,this.container.clientWidth);this.height=Math.max(1,this.container.clientHeight);this.mobile=currentScreen().phone||this.width<760;this.renderer.setSize(this.width,this.height);this.sky.resize(this.width,this.height);this.follow.resize(this.width/this.height);this.setCamera(true);}
   setCamera(immediate=false,dt=1/60){
     const aspect=this.width/this.height;
     if(this.story==='moon'){
@@ -688,26 +670,16 @@ export class ForestWorld {
     this.dudu.position.x=this.state.position.x;this.dudu.position.z=this.state.position.z;
     // Keep Dudu's feet on the bridge when crossing the pond.
     this.dudu.position.y=PONDS.some(p=>Math.abs(this.state.position.z-p.z)<1&&Math.abs(this.state.position.x-p.x)<5.6)?.48:.2;
-    const {body,head,legs,arms}=this.dudu.userData;
-    if(moving&&!paused){this.walkTime+=dt*(running?13:9);body.position.y=Math.abs(Math.sin(this.walkTime))*.1;legs[0].rotation.x=Math.sin(this.walkTime)*.55;legs[1].rotation.x=-Math.sin(this.walkTime)*.55;arms[0].rotation.x=-Math.sin(this.walkTime)*.4;arms[1].rotation.x=Math.sin(this.walkTime)*.4;head.rotation.z=Math.sin(this.walkTime*.5)*.025;}
-    else{body.position.y=this.reducedMotion?0:Math.sin(t*2)*.025;legs.forEach(x=>x.rotation.x*=.8);arms.forEach(x=>x.rotation.x*=.8);head.rotation.z=this.reducedMotion?0:Math.sin(t*.7)*.045;}
+    animateBearPose(this.dudu,dt,t,moving,this.reducedMotion);
+    if(!this.companion)animateBearPose(this.bubu,dt,t,false,this.reducedMotion);
+    this.animals.forEach(animal=>updateAnimal(animal,dt,t,this.playing?this.state.position:{x:99,z:99},(x,z)=>isWalkable(x,z,this.obstacles),this.nightBlend,this.reducedMotion));
     if(!this.reducedMotion){
-      this.bubu.userData.body.position.y=Math.sin(t*2.2)*.028;
-      this.bubu.userData.arms[1].rotation.z=-.55+Math.sin(t*3)*.22;
-      this.bubu.userData.head.rotation.z=Math.sin(t)*.055;
       this.gifts.forEach(({group,ring,sparkle},id)=>{const phase=GIFTS.findIndex(g=>g.id===id);group.position.y=.4+Math.sin(t*2+phase)*.1;sparkle.position.y=1.92+Math.sin(t*2.5+phase)*.18;sparkle.rotation.y=t;ring.material.opacity=.5+Math.sin(t*2)*.12;});
       this.butterflies.forEach(({group,left,right,x,z,phase})=>{group.position.set(x+Math.sin(t*.5+phase)*.95,1.2+Math.sin(t*1.3+phase)*.2,z+Math.cos(t*.4+phase)*.8);group.rotation.y=t*.2+phase;left.rotation.z=Math.sin(t*17+phase)*.85;right.rotation.z=-left.rotation.z;});
       this.ducks.forEach((duck,i)=>{duck.position.x=-1.2+Math.sin(t*.22+i)*.6;duck.rotation.y=Math.sin(t*.2+i)*.4;});
       this.floaties.forEach((r,i)=>{r.scale.x=1+Math.sin(t+i)*.07;});this.dust.rotation.y=t*.008;
       this.balloons.forEach(({group,phase})=>{group.rotation.z=Math.sin(t*.8+phase)*.045;group.rotation.x=Math.cos(t*.6+phase)*.025;});
-      this.animals.forEach(animal=>{
-        const {group,body,legs,x,z,groundY,speed,phase,kind}=animal,angle=t*speed+phase;
-        const nx=x+Math.sin(angle)*1.4,nz=z+Math.cos(angle*.7)*1.1;
-        if(isWalkable(nx,nz,this.obstacles))group.position.set(nx,groundY,nz);
-        group.rotation.y=Math.atan2(Math.cos(angle)*1.4,-Math.sin(angle*.7)*.77);
-        body.position.y=kind==='rabbit'?Math.max(0,Math.sin(t*4+phase))*.13:Math.sin(t*3+phase)*.025;
-        legs.forEach((leg,i)=>leg.rotation.x=Math.sin(t*4+phase+i*Math.PI)*.23);
-      });
+
     }
     this.confettiAge=(this.confettiAge||0)+dt;
     this.confetti.forEach(heart=>{if(!this.reducedMotion){heart.position.y+=dt*heart.userData.speed*.35;heart.position.x+=Math.sin(t+heart.userData.phase)*dt*.15;}heart.quaternion.copy(this.camera.quaternion);heart.material.opacity=Math.max(0,1-(heart.position.y-4)/5)*Math.max(0,1-(this.confettiAge-6)/6);});

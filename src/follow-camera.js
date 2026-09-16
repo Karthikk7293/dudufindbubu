@@ -46,6 +46,8 @@ export class FollowCamera {
     if(snap)this.target.copy(target);else this.target.lerp(target,1-Math.exp(-10*dt));
     this.initialized=true;
     const distance=this.distance;
+    // Broad phase once, before trying alternative camera angles.
+    obstacles=obstacles.filter(o=>(o.x-this.target.x)**2+(o.z-this.target.z)**2<(distance+o.radius+.5)**2);
     const directionAt=(yaw,pitch)=>this.direction.set(Math.sin(yaw)*Math.cos(pitch),Math.sin(pitch),Math.cos(yaw)*Math.cos(pitch));
     const clearance=(offset,lift)=>clearCameraDistance(this.target,directionAt(this.yaw+offset,clampPitch(this.pitch+lift)),distance,obstacles);
     const baseClear=clearance(0,0);

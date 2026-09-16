@@ -41,17 +41,19 @@ The game runs entirely in the browser. The published files include its fonts and
 - **0 / overview button:** see the whole forest or follow Dudu
 - **T / sun–moon button:** switch between day and night (also available before play and in the pause menu)
 - **Escape / P:** pause (Escape also exits native browser fullscreen)
-- **Tablet:** drag the thumbstick; tap the heart to collect or talk; pinch with two fingers to zoom
+- **Phone / tablet:** drag the thumbstick; tap the heart to collect or talk; pinch with two fingers to zoom
 
-**Tablet and desktop only for now.** Phone screens show a “mobile support is coming” message without downloading the 3D game, including in landscape orientation. Use a window at least 768 CSS pixels wide; touch devices need a screen with a short edge of at least 600 CSS pixels. Making a running desktop window too narrow pauses the adventure until it is widened again.
+**Phones, tablets, and desktops are supported.** On a phone, Play requests fullscreen and landscape orientation where available. If the browser cannot rotate automatically, turn your phone sideways; the portrait prompt pauses the adventure until then. Rotation preserves gifts, story progress, and open dialogs. On-screen controls respect display safe areas, and the canvas uses the real viewport dimensions so taps and swipes stay aligned. Portrait tablet play remains available.
+
+On phones, use the left thumbstick to walk, swipe the forest with the other thumb to look around, pinch to zoom, and tap the heart to collect or interact. The camera controls stay along the bottom. The renderer caps phone pixel density, reduces distant ground decoration and leaf detail, and uses a smaller shadow map. The world, gift locations, and story are identical across devices. Real-device performance still depends on GPU and browser; phone behavior is verified with browser touch emulation.
 
 A skeleton of the forest appears immediately while the game loads. The progress bar follows real building stages and stays visible while shaders compile and the first forest frame renders. Play becomes available when the scene is ready. A failed download or unsupported graphics setup shows a retry screen.
 
-Play begins in a close third-person perspective, with a low camera that follows Dudu. Drag to look around the trees, flowers and presents; adjust the distance with the zoom controls. When a trunk or canopy blocks Dudu, the camera eases toward a clear side and returns after leaving the tree. Accurate crown volumes and continuous trunk boundaries keep the camera outside the foliage. The overhead view and whole-forest overview are still available.
+Play begins in a close third-person perspective, with a low camera that follows Dudu. Drag to look around the trees, flowers and presents; adjust the distance with the zoom controls. When a trunk, canopy, roadside lamp, or wooden sign blocks Dudu, the camera eases toward a clear side and returns after leaving the tree. Accurate crown volumes and continuous trunk boundaries keep the camera outside the foliage. The overhead view and whole-forest overview are still available.
 
 The eight gifts can be collected in any order. The expanded forest has connected inner and outer roads, two ponds with bridges, two bear nests, heart balloons, and roaming rabbits, deer, foxes, and sheep. Collecting a gift displays a brief message without interrupting your walk. A labelled pointer and a glowing, collision-aware trail lead to the next missing gift, including the love letter. The pointer stays at the screen edge when the gift is off screen. Open the bag to track a particular gift, read a note, or get a hint. The trail leads to Bubu once the bag is full. Gentle snow, warm sunshine, flying birds, and windblown leaves bring the forest to life; lambs have rounded faces, soft ears, and little smiles.
 
-The forest mixes spreading oaks, green trees with pink blossoms, umbrella crowns with hanging vines, willows, white-barked birches, and pines. Flower beds contain daisies, sunflowers, tulips, lavender, bluebells, and roses. Saplings, tall birches and pines, broad mature oaks, and elder trees have different heights and crown widths. Dudu and Bubu are smaller in proportion to their surroundings. Four small butterfly varieties visit the flowers; drifting clouds, gently swaying foliage, and falling blossom petals add movement.
+The trees have textured bark, tapering branch forks, pointed leaves, and uneven pine boughs, with denser foliage on larger screens. The forest mixes spreading oaks, green trees with pink blossoms, umbrella crowns with hanging vines, willows, white-barked birches, and pines. Flower beds contain daisies, sunflowers, tulips, lavender, bluebells, and roses. Saplings, tall birches and pines, broad mature oaks, and elder trees have different heights and crown widths. Dudu and Bubu are smaller in proportion to their surroundings. Four small butterfly varieties visit the flowers; drifting clouds, gently swaying foliage, and falling blossom petals add movement.
 
 Use the **sun–moon button** or **T** to change the time of day. Night brings a moon and twinkling stars, occasional shooting stars, roadside lanterns, glowing nest windows, and fireflies. Day brings the sun, birds, and butterflies back. Lighting fades smoothly between modes. Reduced-motion settings keep decorative movement still and switch lighting immediately. Your day/night preference survives refreshing or restarting the adventure; changing it in the pause menu keeps the game paused.
 
@@ -65,7 +67,7 @@ After the party, the pointer leads to the **Moonwatch nest** in the northwestern
 
 ## Audio and artwork
 
-The forest, characters, objects, UI icons, and animation are custom code-built assets. Music, forest ambience, birds, footsteps, gift chimes, and cute character chirps are generated with Web Audio. Sound begins after pressing Play or the sound button, as required by browsers. These are **original synthesized sounds, not the Instagram characters’ recorded voices**. The plush character models are refined from the user’s [look reference](https://www.instagram.com/reel/Dar3t6FNPJT/): oversized rounded heads, short bodies and limbs, tiny low-set eyes and smiles, Dudu’s honey cheeks and Bubu’s white face, pink cheeks, dark ear and paw tips, and bow tie. They have subtle fur shading, occasional blinks, and smiling eyes during the birthday party. Dudu keeps his gift backpack with a little white-bear charm. Local visual references are documented in `references/characters/README.md`. No assets or code are copied from Messenger.
+The forest, characters, objects, UI icons, and animation are custom code-built assets. Music, forest ambience, birds, footsteps, gift chimes, and cute character chirps are generated with Web Audio. Sound begins after pressing Play or the sound button, as required by browsers. These are **original synthesized sounds, not the Instagram characters’ recorded voices**. The plush character models are refined from the user’s [look reference](https://www.instagram.com/reel/Dar3t6FNPJT/): oversized rounded heads, short bodies and limbs, tiny low-set eyes and smiles, Dudu’s honey cheeks and Bubu’s white face, pink cheeks, dark ear and paw tips, and bow tie. They have subtle fur shading, softly defined muzzles, eye highlights, occasional blinks, and smiling eyes during the birthday party. Walking steps follow distance traveled, with gentle breathing, arm swings, and ear movements. Wildlife alternates between short walks, grazing, and rests; rabbits hop, nearby animals look up and retreat, and animals settle down at night. These are stylized characters rather than photorealistic models. Dudu keeps his gift backpack with a little white-bear charm. Local visual references are documented in `references/characters/README.md`. No assets or code are copied from Messenger.
 
 Night ambience adds gentle synthesized cricket chirps and occasional owl calls when sound is enabled.
 
@@ -78,6 +80,7 @@ npm run build
 npm run preview
 npm test
 npm run test:browser
+npm run test:mobile
 npm run test:interaction
 npm run test:browser -- --refinements
 npm run test:browser -- --characters
@@ -97,4 +100,10 @@ The day/night browser check covers vegetation varieties, routes to every gift an
 
 The experience checks separately cover the initial skeleton and download failure, third-person controls and night rendering, a real gift collection followed by refresh, and tablet orbit / pinch / movement. Camera logic tests cover clearance, smoothing, distance limits, and tilt limits. Browser fixtures use an explicit development-only initial state; production never restores birthday progress.
 
-The moon-nest browser check covers the lightweight phone notice, tablet rendering, actual forest routes, climbing through dusk, paused elevated positions, stargazing and meteors, descent, and restarting during a visit. Add `--preview` for the climb and desktop/tablet treetop screenshots only.
+The moon-nest browser check covers tablet rendering, actual forest routes, climbing through dusk, paused elevated positions, stargazing and meteors, descent, and restarting during a visit. Add `--preview` for the climb and desktop/tablet treetop screenshots only.
+
+## Engine prototype
+
+The interactive engine study is preserved at **`/engine.html`** in both development and the Vercel build. The forest is the homepage. See [ENGINE.md](./ENGINE.md) for assembly, inspection, and experimental webcam hand controls. Engine modules and tracking assets are loaded only by that page.
+
+The mobile check exercises portrait entry, a denied orientation lock, landscape touch controls, simultaneous movement and camera swipes, pinch zoom, cancelled touches, dialog restoration after rotation, gift collection, night mode, small landscape screens, and a fresh adventure after refresh. `node tests/forest-story.mjs` checks arrival, celebration, pausing, and companion walking; `node tests/deployment.browser.mjs` checks both built pages against a preview server on port 4174 (`PREVIEW_URL` overrides it). `node tests/forest-visuals.mjs` captures the bear, wildlife, and tree studies.

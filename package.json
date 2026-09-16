@@ -9,9 +9,16 @@
     "preview": "vite preview --host 0.0.0.0",
     "test": "node --test tests/*.test.js",
     "test:browser": "node tests/browser.mjs",
-    "test:interaction": "node tests/interaction.mjs"
+    "test:interaction": "node tests/browser.mjs --interaction",
+    "test:camera": "node tests/engine.browser.mjs --camera",
+    "test:mobile": "node tests/mobile.browser.mjs",
+    "test:engine": "node tests/engine.browser.mjs",
+    "test:engine:inputs": "node tests/engine.inputs.mjs",
+    "test:story": "node tests/forest-story.mjs",
+    "test:deployment": "node tests/deployment.browser.mjs"
   },
   "dependencies": {
+    "@mediapipe/tasks-vision": "1.0.1",
     "three": "^0.170.0"
   },
   "devDependencies": {

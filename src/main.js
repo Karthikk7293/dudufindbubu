@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { ForestWorld } from './world.js';
 import { ForestAudio } from './audio.js';
+import { currentScreen } from './screen-support.js';
 import { icons, giftArt } from './icons.js';
 import { FOLLOW_MIN, FOLLOW_MAX } from './follow-camera.js';
 import { GIFTS, BUBU, START, DUDU_NEST, BUBU_NEST, DESTINATION, MOON_NEST, WORLD_RADIUS, TRAILS, PONDS, SAVE_KEY, freshState, restoreState, collectGift, canCelebrate, shouldRevealBubu, guidanceTarget, moveWithCollisions, findPath, isWalkable } from './game-state.js';
@@ -19,7 +20,7 @@ let guidedId=null,inspectedGift=null,guideTarget=null,guidePath=[],guideTime=0,g
 let joystick={x:0,y:0}, joystickPointer=null;
 const keys=new Set();
 const dialogs=[...document.querySelectorAll('dialog')];
-const isPaused=()=>dialogs.some(d=>d.open)||document.hidden||document.documentElement.dataset.unsupported==='true';
+const isPaused=()=>dialogs.some(d=>d.open)||document.hidden||document.documentElement.dataset.rotateRequired==='true';
 
 $('sound-button').innerHTML=icons.muted;$('help-button').innerHTML=icons.help;$('headphone-icon').innerHTML=icons.headphones;
 $('leaf-icon').innerHTML=icons.leaf;$('heart-icon').innerHTML=icons.heart;$('map-icon').innerHTML=icons.map;
@@ -52,7 +53,7 @@ function toggleTime(){
 ['intro-time','play-time','pause-time'].forEach(id=>$(id).addEventListener('click',toggleTime));updateTimeControls();
 
 function openDialog(id){
-  route=[];keys.clear();joystick={x:0,y:0};$('joystick-knob').style.transform='';
+  clearInputs();
   dialogs.filter(dialog=>dialog.open&&dialog.id!==id).forEach(dialog=>dialog.close());
   if(!$(id).open)$(id).showModal();audio.setPaused(true);
 }
@@ -68,12 +69,37 @@ $('map-button').addEventListener('click',openMap);$('play-map').addEventListener
 $('play-bag').addEventListener('click',()=>openDialog('bag-dialog'));$('play-pause').addEventListener('click',()=>openDialog('pause-dialog'));
 $('pause-sound').addEventListener('click',toggleSound);$('pause-help').addEventListener('click',()=>openDialog('help-dialog'));
 async function enterFullscreen(){
-  if(document.fullscreenElement||!document.fullscreenEnabled)return;
   fullscreenTransition=true;
-  try{await $('app').requestFullscreen();}catch{/* The forest still fills the browser when native fullscreen is unavailable. */}
-  finally{fullscreenTransition=false;}
+  try{
+    if(!document.fullscreenElement&&document.fullscreenEnabled)await $('app').requestFullscreen();
+  }catch{/* Some phone browsers use the full browser viewport instead. */}
+  try{if(currentScreen().phone&&screen.orientation?.lock)await screen.orientation.lock('landscape');}
+  catch{/* The rotate prompt is the fallback for unsupported or denied locks. */}
+  finally{fullscreenTransition=false;updateScreen();}
 }
 $('fullscreen-button').addEventListener('click',enterFullscreen);
+$('rotate-fullscreen').addEventListener('click',enterFullscreen);
+function updateScreen(){
+  const layout=currentScreen(),rotate=playing&&layout.rotate;
+  const changed=document.documentElement.dataset.rotateRequired!==String(rotate);
+  document.documentElement.dataset.rotateRequired=String(rotate);
+  document.documentElement.dataset.phone=String(layout.phone);
+  $('rotate-notice').hidden=!rotate;
+  $('game-shell').inert=rotate;
+  if(changed&&playing){
+    clearInputs();
+    // A modal occupies the browser's top layer; remember it while rotating.
+    if(rotate){suspendedDialog=dialogs.find(d=>d.open)?.id;dialogs.filter(d=>d.open).forEach(d=>d.close());$('rotate-notice').focus({preventScroll:true});}
+    else if(suspendedDialog){openDialog(suspendedDialog);suspendedDialog=null;}
+    else $('world').focus({preventScroll:true});
+    audio.setPaused(isPaused());
+  }
+  if(world&&ready){world.resize();world.needsRender=true;}
+}
+let suspendedDialog=null;
+window.addEventListener('resize',updateScreen);
+screen.orientation?.addEventListener('change',updateScreen);
+document.addEventListener('fullscreenchange',updateScreen);
 function updateZoomUI(){
   if(!world)return;const follow=world.cameraMode==='third-person';
   $('zoom-in').disabled=!world.overview&&(follow?world.follow.distance<=FOLLOW_MIN:world.zoomView<=14);
@@ -119,7 +145,8 @@ function updateGuidance(dt){
   $('guide-button').setAttribute('aria-label',`${near?action:'Follow the trail to'} ${next.short}`);
   $('gift-pointer').setAttribute('aria-label',`${near?action:'Walk to'} ${next.short}`);
   const p=world.projectLocation(next.x,2.7,next.z),{x,y}=p;
-  const px=Math.max(90,Math.min(world.width-90,x)),py=Math.max(150,Math.min(world.height-(world.mobile?280:130),y));
+  const compact=currentScreen().compact;
+  const px=Math.max(95,Math.min(world.width-95,x)),py=Math.max(compact?125:150,Math.min(world.height-(compact?120:world.mobile?220:130),y));
   const offscreen=!p.front||Math.abs(px-x)>1||Math.abs(py-y)>1,arrow=$('gift-pointer').querySelector('.pointer-arrow');
   $('gift-pointer').classList.toggle('offscreen',offscreen);$('gift-pointer').style.left=`${px}px`;$('gift-pointer').style.top=`${py}px`;
   $('pointer-name').textContent=offscreen?`${next.short} · ${Math.ceil(distance)} m`:next.short;
@@ -156,9 +183,9 @@ async function start(){
   ['play-tools','zoom-tools','touch-controls'].forEach(show);
   if(!matchMedia('(pointer: coarse)').matches)$('touch-controls').classList.add('hidden');
   $('world').focus({preventScroll:true});
-  enterFullscreen();world.beginDeparture();updateZoomUI();
+  enterFullscreen();updateScreen();world.beginDeparture();updateZoomUI();
   let soundPreference=null;try{soundPreference=localStorage.getItem('dudu-sound');}catch{}
-  if(soundPreference!=='off'){await audio.start();updateSoundButton();audio.chirp();}
+  if(soundPreference!=='off'){await audio.start();audio.setPaused(isPaused());updateSoundButton();audio.chirp();}
   if(state.departed)toast(state.completed?'Welcome back. There’s always time for another little wander. ♡':'Your little adventure continues. B opens the bag; M opens the map.',5000);
   else speak('“A birthday adventure starts at home.” ♡');
 }
@@ -232,12 +259,8 @@ window.addEventListener('keydown',event=>{
   if(k==='escape'||k==='p'){event.preventDefault();openDialog('pause-dialog');}
 });
 window.addEventListener('keyup',event=>keys.delete(event.key.toLowerCase()));
-window.addEventListener('blur',()=>{keys.clear();joystick={x:0,y:0};$('joystick-knob').style.transform='';if(playing&&!isPaused()&&!fullscreenTransition)openDialog('pause-dialog');});
-document.addEventListener('visibilitychange',()=>{audio.setPaused(document.hidden||isPaused());if(document.hidden){keys.clear();joystick={x:0,y:0};}});
-window.addEventListener('forest-screen-change',({detail})=>{
-  if(!detail.supported){keys.clear();route=[];resetJoystick();dialogs.filter(d=>d.open).forEach(d=>d.close());audio.setPaused(true);}
-  else if(playing&&!dialogs.some(d=>d.open))openDialog('pause-dialog');
-});
+window.addEventListener('blur',()=>{clearInputs();if(playing&&!isPaused()&&!fullscreenTransition)openDialog('pause-dialog');});
+document.addEventListener('visibilitychange',()=>{audio.setPaused(isPaused());if(document.hidden)clearInputs();});
 
 
 function walkTo(clientX,clientY){
@@ -264,7 +287,7 @@ $('world').addEventListener('pointermove',event=>{
     if(mouseLook.dragged&&!isPaused()){world.orbitCamera(dx,dy);route=[];}
     mouseLook.x=event.clientX;mouseLook.y=event.clientY;return;
   }
-  const point=forestTouches.get(event.pointerId);if(!point)return;const dx=event.clientX-point.x,dy=event.clientY-point.y;point.x=event.clientX;point.y=event.clientY;
+  const point=forestTouches.get(event.pointerId);if(!point||isPaused())return;const dx=event.clientX-point.x,dy=event.clientY-point.y;point.x=event.clientX;point.y=event.clientY;
   if(forestTouches.size===2){const[a,b]=[...forestTouches.values()],distance=Math.hypot(a.x-b.x,a.y-b.y);if(pinchDistance>0&&distance>0)zoom(pinchDistance/distance);pinchDistance=distance;}
   else if(!pinched&&Math.hypot(point.x-point.startX,point.y-point.startY)>8&&!isPaused()){point.dragged=true;world.orbitCamera(dx,dy);route=[];}
 });
@@ -276,13 +299,17 @@ function endForestTouch(event){
 $('world').addEventListener('wheel',event=>{if(playing&&!isPaused()){event.preventDefault();zoom(Math.exp(Math.max(-150,Math.min(150,event.deltaY))*.0025));}},{passive:false});
 function moveJoystick(event){
   const rect=$('joystick').getBoundingClientRect();let x=event.clientX-(rect.left+rect.width/2),y=event.clientY-(rect.top+rect.height/2);
-  const distance=Math.hypot(x,y),max=36;if(distance>max){x=x/distance*max;y=y/distance*max;}
+  const distance=Math.hypot(x,y),max=rect.width*.32;if(distance>max){x=x/distance*max;y=y/distance*max;}
   joystick={x:x/max,y:y/max};$('joystick-knob').style.transform=`translate(${x}px,${y}px)`;route=[];
 }
-$('joystick').addEventListener('pointerdown',event=>{if(isPaused())return;joystickPointer=event.pointerId;$('joystick').setPointerCapture(event.pointerId);moveJoystick(event);});
+$('joystick').addEventListener('pointerdown',event=>{if(isPaused()||joystickPointer!==null||world.cinematic)return;joystickPointer=event.pointerId;$('joystick').setPointerCapture(event.pointerId);moveJoystick(event);});
 $('joystick').addEventListener('pointermove',event=>{if(event.pointerId===joystickPointer)moveJoystick(event);});
 function resetJoystick(){joystickPointer=null;joystick={x:0,y:0};$('joystick-knob').style.transform='';}
-['pointerup','pointercancel','lostpointercapture'].forEach(name=>$('joystick').addEventListener(name,resetJoystick));
+['pointerup','pointercancel','lostpointercapture'].forEach(name=>$('joystick').addEventListener(name,event=>{if(event.pointerId===joystickPointer)resetJoystick();}));
+function clearInputs(){
+  keys.clear();route=[];resetJoystick();forestTouches.clear();pinched=false;pinchDistance=0;mouseLook=null;
+}
+updateScreen();
 
 function drawMap(canvas,large=false){
   const ctx=canvas.getContext('2d'),w=canvas.width,h=canvas.height;ctx.clearRect(0,0,w,h);
@@ -315,7 +342,6 @@ function drawMap(canvas,large=false){
 
 function animate(time){
   const dt=Math.min((time-lastTime)/1000,.25);lastTime=time;let moving=false,running=false;
-  if(document.documentElement.dataset.unsupported==='true'){requestAnimationFrame(animate);return;}
   const paused=isPaused();
   if(playing&&!paused&&!world.cinematic){
     world.orbitCamera((Number(keys.has('l'))-Number(keys.has('j')))*dt*170,(Number(keys.has('k'))-Number(keys.has('i')))*dt*100);
@@ -388,5 +414,5 @@ export async function initialize(progress){
   await world.warmUp(progress);
   ready=true;$('start-button').disabled=false;lastTime=performance.now();requestAnimationFrame(animate);
   // Read-only state for browser diagnostics, with ordinary input driving tests.
-  if(import.meta.env.DEV)window.__dudu={snapshot:()=>JSON.parse(JSON.stringify({state,ready,playing,paused:isPaused(),camera:{mode:world.cameraMode,perspective:!!world.camera.isPerspectiveCamera,position:world.camera.position,target:world.story==='moon'?world.moonLook:world.thirdPerson?world.follow.target:world.cameraTarget,yaw:world.movementYaw,pitch:world.follow.pitch,fov:world.camera.fov,distance:world.follow.distance,arm:world.follow.arm,avoidYaw:world.follow.avoidYaw,avoidPitch:world.follow.avoidPitch},nearby:nearby?.id,position:state.position,obstacles:world.obstacles,sound:audio.enabled,route:route.length,render:world.renderer.info.render,time:world.time,view:world.viewSize,zoom:world.cameraMode==='third-person'?world.follow.distance:world.zoomView,overview:world.overview,story:world.story,bubuVisible:world.bubu.visible,bubuPosition:world.bubu.position,duduPosition:world.dudu.position,animals:world.animals.map(a=>({kind:a.kind,x:a.group.position.x,z:a.group.position.z})),balloons:world.balloons.length,worldRadius:WORLD_RADIUS,timeOfDay:world.timeOfDay,nightBlend:world.nightBlend,trees:world.treeKinds,treeSizes:world.treeSizes,bearScale:world.dudu.scale.x,moonJourney:world.moonJourney?{phase:world.moonJourney.phase,progress:world.moonJourney.progress}:null,flowerBeds:world.flowerBeds,butterflies:world.butterflies.map(b=>b.kind),lamps:{count:world.roadLighting.sites.length,sites:world.roadLighting.sites,glowing:world.roadLighting.glass.emissiveIntensity,lights:world.roadLighting.lights.map(l=>l.intensity)},guidance:guideTarget?{id:guideTarget.id,path:guidePath}:null,following:!!world.companion,partyTime:world.storyTime,candleLit:world.candleFlame.visible,weather:{snow:world.atmosphere.flakes.length,birds:world.atmosphere.birds.map(b=>({x:b.group.position.x,y:b.group.position.y,z:b.group.position.z})),windLeaves:world.atmosphere.leaves.count,sun:world.sky.sun.visible,moon:world.sky.moon.visible,clouds:world.sky.clouds.length,stars:world.sky.stars.geometry.attributes.position.count,shootingStar:world.sky.meteor.visible,nightTime:world.sky.nightTime,fireflies:world.atmosphere.fireflies.visible?world.atmosphere.fireflyData.length:0,petals:world.atmosphere.petals.count}})),project:(x,z,y=0)=>{const point=new THREE.Vector3(x,y,z).project(world.camera),rect=$('world').getBoundingClientRect();return{x:rect.left+(point.x*.5+.5)*rect.width,y:rect.top+(-point.y*.5+.5)*rect.height};}};
+  if(import.meta.env.DEV)window.__dudu={snapshot:()=>JSON.parse(JSON.stringify({state,ready,playing,paused:isPaused(),camera:{mode:world.cameraMode,perspective:!!world.camera.isPerspectiveCamera,position:world.camera.position,target:world.story==='moon'?world.moonLook:world.thirdPerson?world.follow.target:world.cameraTarget,yaw:world.movementYaw,pitch:world.follow.pitch,fov:world.camera.fov,distance:world.follow.distance,arm:world.follow.arm,avoidYaw:world.follow.avoidYaw,avoidPitch:world.follow.avoidPitch},nearby:nearby?.id,position:state.position,obstacles:world.obstacles,sound:audio.enabled,route:route.length,render:world.renderer.info.render,quality:world.quality,time:world.time,view:world.viewSize,zoom:world.cameraMode==='third-person'?world.follow.distance:world.zoomView,overview:world.overview,story:world.story,bubuVisible:world.bubu.visible,bubuPosition:world.bubu.position,duduPosition:world.dudu.position,animals:world.animals.map(a=>({kind:a.kind,x:a.group.position.x,z:a.group.position.z,action:a.brain.mode})),balloons:world.balloons.length,worldRadius:WORLD_RADIUS,timeOfDay:world.timeOfDay,nightBlend:world.nightBlend,trees:world.treeKinds,treeSizes:world.treeSizes,bearScale:world.dudu.scale.x,moonJourney:world.moonJourney?{phase:world.moonJourney.phase,progress:world.moonJourney.progress}:null,flowerBeds:world.flowerBeds,butterflies:world.butterflies.map(b=>b.kind),lamps:{count:world.roadLighting.sites.length,sites:world.roadLighting.sites,glowing:world.roadLighting.glass.emissiveIntensity,lights:world.roadLighting.lights.map(l=>l.intensity)},guidance:guideTarget?{id:guideTarget.id,path:guidePath}:null,following:!!world.companion,partyTime:world.storyTime,candleLit:world.candleFlame.visible,weather:{snow:world.atmosphere.flakes.length,birds:world.atmosphere.birds.map(b=>({x:b.group.position.x,y:b.group.position.y,z:b.group.position.z})),windLeaves:world.atmosphere.leaves.count,sun:world.sky.sun.visible,moon:world.sky.moon.visible,clouds:world.sky.clouds.length,stars:world.sky.stars.geometry.attributes.position.count,shootingStar:world.sky.meteor.visible,nightTime:world.sky.nightTime,fireflies:world.atmosphere.fireflies.visible?world.atmosphere.fireflyData.length:0,petals:world.atmosphere.petals.count}})),project:(x,z,y=0)=>{const point=new THREE.Vector3(x,y,z).project(world.camera),rect=$('world').getBoundingClientRect();return{x:rect.left+(point.x*.5+.5)*rect.width,y:rect.top+(-point.y*.5+.5)*rect.height};}};
 }

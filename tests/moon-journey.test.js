@@ -2,16 +2,6 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { MoonJourney, ladderFoot, nestSeat } from '../src/moon-journey.js';
 import { MOON_NEST, findPath } from '../src/game-state.js';
-import { supportsForest } from '../src/screen-support.js';
-
-test('phones are blocked in both orientations while tablets and desktops work',()=>{
-  const phone={width:390,screenWidth:390,screenHeight:844,coarse:true};
-  assert.equal(supportsForest(phone),false);assert.equal(supportsForest({...phone,width:844}),false);
-  assert.equal(supportsForest({width:768,screenWidth:768,screenHeight:1024,coarse:true}),true);
-  assert.equal(supportsForest({width:1024,screenWidth:1024,screenHeight:768,coarse:true}),true);
-  assert.equal(supportsForest({width:1280,screenWidth:1280,screenHeight:720}),true);
-  assert.equal(supportsForest({width:700,screenWidth:1280,screenHeight:720}),false);
-});
 test('both bears reach the ladder, climb through dusk, pause, watch and return safely',()=>{
   const obstacles=[{x:MOON_NEST.x,z:MOON_NEST.z,radius:1},{x:-14,z:-22,radius:.5}];
   const journey=new MoonJourney({x:-12,z:-24},{x:-10,z:-25},obstacles,0);

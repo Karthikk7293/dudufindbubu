@@ -1,0 +1,58 @@
+/* Use the real viewport: canvas pixels and touch coordinates stay aligned. */
+:root{--safe-left:env(safe-area-inset-left,0px);--safe-right:env(safe-area-inset-right,0px);--safe-top:env(safe-area-inset-top,0px);--safe-bottom:env(safe-area-inset-bottom,0px)}
+html,body{width:100%;height:100%;overscroll-behavior:none}
+#app.playing,#app:fullscreen{height:100dvh}.playing #game-shell{height:100%;min-height:0}
+.rotate-notice{position:absolute;inset:0;z-index:50;display:grid;place-items:center;padding:32px max(24px,var(--safe-left));overflow:auto;background:radial-gradient(ellipse at 80% 12%,#dde8ce,transparent 60%),#f6f5ed;text-align:center}
+.rotate-card{max-width:350px;margin:auto}.rotate-card h2{font:500 34px/1.2 var(--serif);letter-spacing:-1px;margin:26px 0 16px}.rotate-card p{font-size:14px;line-height:1.8;color:#738168}.rotate-card .rotate-note{font-size:12px;margin:24px 0}.rotate-card .primary-button{width:100%;justify-content:center;gap:20px}
+.rotate-phone{display:grid;place-items:center;width:132px;height:72px;margin:25px auto 38px;border:4px solid #819574;border-radius:15px;box-shadow:7px 7px 0 #dbe3cc;color:#b8805b;font:40px Georgia;transform:rotate(-8deg)}
+.paper-dialog{overscroll-behavior:contain;max-height:calc(100dvh - var(--safe-top) - var(--safe-bottom) - 24px)}
+@media(pointer:coarse){
+  button{touch-action:manipulation}button:hover{transform:none}
+  .topbar-right .icon-button,.floating-button,.zoom-tools button,.dialog-close{min-width:44px;min-height:44px}
+  .dialog-close{top:7px;right:9px;background:var(--paper);z-index:1}
+  .menu-option,.quest-bottom button,.text-button{min-height:44px}
+  .joystick{left:calc(var(--safe-left) + 18px);bottom:calc(var(--safe-bottom) + 18px)}
+  .touch-interact{right:calc(var(--safe-right) + 18px);bottom:calc(var(--safe-bottom) + 24px)}
+  .gift-pointer{min-height:52px;min-width:80px}.gift-pointer:hover{transform:translate(-50%,-100%)}
+  .guide-card:hover{transform:none}.playing .interact:hover{transform:translateX(-50%)}
+  .play-tools{right:calc(var(--safe-right) + 12px);top:calc(var(--safe-top) + 12px);gap:6px}
+  .guide-card{left:calc(var(--safe-left) + 12px);top:calc(var(--safe-top) + 12px)}
+}
+@media(max-width:599px) and (orientation:portrait){
+  .topbar{height:80px;padding:0 14px}.brand{font-size:19px;gap:7px}.brand-bears{width:44px}.brand small{font-size:6px;letter-spacing:1.4px}.topbar-right{gap:2px}.topbar-right .icon-button{border:none}
+  #game-shell{height:calc(100dvh - 80px);min-height:0}.bottom-bar{display:none}
+  .intro{left:24px;right:24px;top:6%;padding:20px 0;background:radial-gradient(ellipse at 10% 30%,#e9eddbed,transparent 80%)}
+  .intro h1{font-size:clamp(35px,10vw,46px);margin:20px 0}.intro p{font-size:12px;max-width:300px}.intro .primary-button{min-height:52px;font-size:13px;padding:0 24px}
+  .intro .sound-note{display:flex;font-size:10px}.intro .sound-note::after{content:' · Best played sideways'}
+  .map-preview{right:18px;bottom:20px;width:138px}.night .intro{background:radial-gradient(ellipse at 10% 30%,#16253bd9,transparent 80%)}
+  .forest-loader{padding:24px}.loader-layout{padding-top:28px;gap:25px}.loader-copy h1{font-size:38px}
+}
+@media(max-width:360px) and (orientation:portrait){.brand{font-size:17px}.brand-bears{width:36px}.topbar-right{gap:0}}
+@media(max-height:599px) and (orientation:landscape){
+  .topbar{height:60px;padding:0 24px}.brand{font-size:21px}.brand-bears{width:45px}.brand small{font-size:6px}.chapter,.bottom-bar,.intro-notes,.sound-note,.world-caption,.scene-label{display:none}
+  #game-shell{height:calc(100dvh - 60px);min-height:0}.intro{top:6%;left:5%}.intro h1{font-size:34px;letter-spacing:-1px;margin:10px 0}.intro p{font-size:11px;line-height:1.6;margin-bottom:12px}.intro .primary-button{min-height:44px}
+  .map-preview{width:135px;bottom:18px}.map-preview canvas{height:65px}
+  .forest-loader{padding:16px 28px}.loader-layout{grid-template-columns:1fr 1fr;gap:30px;padding:10px 0}.loader-copy h1{font-size:30px}.loader-status{margin-top:16px}.forest-skeleton{width:100%;aspect-ratio:1.5}.loader-brand{font-size:17px}
+}
+@media(pointer:coarse) and (max-height:599px) and (orientation:landscape){
+  .playing .scene-grain{display:none}
+  .guide-card{width:auto;max-width:220px;padding:7px 10px;gap:7px;min-height:48px;border-radius:14px}.guide-copy strong{font-size:11px}.guide-copy small{font-size:9px}#guide-art{display:block}#guide-art svg{width:26px;height:26px}#guide-arrow{font-size:22px}
+  .play-tools .floating-button{width:44px;height:44px}
+  .zoom-tools{left:50%;right:auto;bottom:calc(var(--safe-bottom) + 12px);transform:translateX(-50%);width:auto;flex-wrap:nowrap;padding:3px;gap:0;border-radius:28px}
+  .zoom-tools button,.zoom-tools #camera-mode{flex:none;width:44px;height:44px;min-height:44px;border-radius:50%}.zoom-tools #camera-mode span{display:none}.zoom-tools #camera-mode[aria-pressed=true]{background:#e0e8d1}.night .zoom-tools #camera-mode[aria-pressed=true]{background:#354760}
+  .touch-controls{height:120px}.touch-controls .joystick{width:92px;height:92px}.joystick>div{width:42px;height:42px}.touch-interact{width:62px;height:62px;font-size:29px}
+  .playing .interact{left:50%;right:auto;bottom:calc(var(--safe-bottom) + 72px);transform:translateX(-50%);min-height:44px;max-width:calc(100% - 280px);padding:8px 16px;font-size:11px;white-space:normal;text-align:center}
+  .playing .toast{left:50%;right:auto;bottom:calc(var(--safe-bottom) + 72px);top:auto;width:auto;min-width:200px;max-width:calc(100% - 290px);font-size:10px;padding:8px 15px;border-radius:12px}
+  .playing:has(.interact:not(.hidden)) .toast{display:none}
+  .speech-bubble{max-width:220px;font-size:10px;padding:8px 12px}.gift-pointer{margin:0}#pointer-name{font-size:10px}.pointer-arrow{width:27px;height:27px}
+  .party-caption{top:26%;gap:6px}.party-caption strong{font-size:26px}
+  .moon-caption{top:80px;right:calc(var(--safe-right) + 20px);max-width:38%;width:260px}.moon-caption strong{font-size:19px;margin:7px 0}.moon-caption small{font-size:10px;line-height:1.5}.moon-visit .interact{bottom:calc(var(--safe-bottom) + 14px)}
+  .paper-dialog{padding:22px 30px;width:min(520px,calc(100% - var(--safe-left) - var(--safe-right) - 36px));margin:auto}.paper-dialog h2{font-size:27px;margin:6px 40px 10px 0}.paper-dialog p{font-size:11px;line-height:1.6}.paper-dialog .primary-button{min-height:44px;margin-top:14px}.dialog-flower{display:none}
+  .bag-dialog .bag-slots{gap:8px;margin:15px 0}.bag-dialog .bag-slot{height:65px}.bag-dialog .bag-slot svg{width:28px;height:28px}.bag-dialog .bag-hint{min-height:0;margin-top:10px}.bag-dialog .quest-bottom{margin-top:4px}
+  .map-dialog canvas{max-height:48dvh;margin:8px 0}.found-art{height:60px;width:60px;margin:0 auto 10px}.found-art svg{height:42px;width:42px}.gift-note{margin:10px 0;padding:10px;font-size:14px}
+}
+@media(pointer:coarse) and (max-height:360px) and (orientation:landscape){
+  .intro p{display:none}.intro h1{font-size:30px;margin:8px 0 14px}
+  .guide-card{max-width:190px}#guide-art{display:none}.moon-caption small{display:none}
+  .playing .speech-bubble{max-width:185px}.playing .toast{font-size:9px;max-width:240px}
+}
