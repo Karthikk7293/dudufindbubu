@@ -1,0 +1,17 @@
+{
+  "blender": "5.2.2 LTS",
+  "bones": 15,
+  "triangles": 16744,
+  "materials": 5,
+  "expressions": [
+    "Blink"
+  ],
+  "strideLength": 0.66,
+  "animations": [
+    "Idle",
+    "Walk",
+    "Graze",
+    "Rest"
+  ],
+  "bytes": 741200
+}

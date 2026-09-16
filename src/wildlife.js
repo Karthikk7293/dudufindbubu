@@ -110,4 +110,5 @@ export function updateAnimal(animal,dt,time,player,walkable,night,reducedMotion)
   ears.forEach((ear,i)=>{const flick=!reducedMotion&&((time+phase+i*.9)%7)<.3?Math.sin((time+phase+i*.9)%7/ .3*Math.PI)*.15:0;ear.rotation.z=mix(ear.rotation.z,ear.userData.restZ+flick);});
   tail.rotation.y=reducedMotion?0:Math.sin(time*(moving?3:1.3)+phase)*(kind==='fox'?.18:.07);
   const blink=(time+phase)%6.3;eyes.forEach(eye=>eye.scale.y=.044*(sleep?.12:!reducedMotion&&blink<.16?Math.max(.1,Math.abs(blink-.08)/.08):1));
+  animal.blenderSheep?.update(dt,time,brain,reducedMotion);
 }

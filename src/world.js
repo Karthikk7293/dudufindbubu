@@ -186,6 +186,12 @@ export class ForestWorld {
     this.moonNest=buildMoonNest(this.land,this.obstacles,this.cameraObstacles);
     await progress(60,'Planting flowers and waking the butterflies…');
     this.buildDetails();this.buildGifts();this.buildFields();
+    await progress(66,'Fluffing the sheep’s wool…');
+    try{
+      const {loadSheepTemplate,attachSheepModel}=await import('./blender-sheep.js');
+      const sheep=await loadSheepTemplate();
+      this.animals.filter(animal=>animal.kind==='sheep').forEach(animal=>attachSheepModel(animal,sheep));
+    }catch(error){this.wildlifeLoadError='The sheep’s new wool could not load. Their usual look is ready to play.';console.warn(this.wildlifeLoadError,error);}
     this.flowerBeds=buildFlowerBeds(this.land,this.obstacles);this.butterflies=buildButterflies(this.scene,this.flowerBeds.beds);
     await progress(72,'Wrapping presents and lighting the lanterns…');
     this.roadLighting=new RoadLighting(this.scene,this.land,this.obstacles);

@@ -4,9 +4,25 @@ import { loadDuduModel, poseDuduFace } from './blender-dudu.js';
 import { BearExpression } from './bear-expression.js';
 
 const $ = id => document.getElementById(id), stage = $('stage');
+const sheep = new URLSearchParams(location.search).get('animal') === 'sheep';
+const characterName = sheep ? 'The sheep' : 'Dudu';
+document.querySelector(`[data-subject="${sheep ? 'sheep' : 'dudu'}"]`).setAttribute('aria-current', 'page');
+if (sheep) {
+  document.title = 'Sheep · Character workshop';
+  document.querySelector('h1').textContent = 'Meet the sheep';
+  document.querySelector('.forest-link').href = '/';
+  stage.setAttribute('aria-label', 'Interactive 3D preview of the forest sheep');
+  $('expression-label').parentElement.hidden = true;
+  document.querySelector('.note').textContent = 'Soft fleece, sleepy eyes, and quiet mornings in the meadow.';
+  const buttons = document.querySelector('[aria-labelledby="movement-label"]');
+  for (const name of ['Graze', 'Rest']) {
+    const button = document.createElement('button');button.dataset.clip = name;
+    button.textContent = name;button.setAttribute('aria-pressed', 'false');buttons.appendChild(button);
+  }
+}
 const reduced = matchMedia('(prefers-reduced-motion: reduce)');
 let asset, mixer, active, renderer, orbit, clock = 0, paused = false, lastTime = 0;
-let mood = 'calm', clip = 'Idle';
+let mood = 'calm', clip = 'Idle', distance = 0;
 const expression = new BearExpression();
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0xeee9df);
@@ -26,7 +42,8 @@ const shadow = new THREE.Mesh(new THREE.PlaneGeometry(1.65, 1.25), new THREE.Mes
 shadow.rotation.x = -Math.PI / 2;shadow.position.y = 0;scene.add(shadow);
 
 function resetCamera() {
-  camera.position.set(2.3, 1.5, 5.4);orbit.target.set(0, .9, 0);orbit.update();
+  camera.position.set(2.3, sheep ? 1.3 : 1.5, sheep ? 3.7 : 5.4);
+  orbit.target.set(0, sheep ? .6 : .9, 0);orbit.update();
 }
 function resize() {
   const { width, height } = stage.getBoundingClientRect();
@@ -35,8 +52,10 @@ function resize() {
 }
 function chooseClip(name) {
   clip = name;
-  const next = mixer.clipAction(asset.animations.find(a => a.name === name));
-  if (next !== active) { next.reset().fadeIn(.25).play();active?.fadeOut(.25);active = next; }
+  if (!sheep) {
+    const next = mixer.clipAction(asset.animations.find(a => a.name === name));
+    if (next !== active) { next.reset().fadeIn(.25).play();active?.fadeOut(.25);active = next; }
+  }
   document.querySelectorAll('[data-clip]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.clip === name)));
 }
 function render(now) {
@@ -44,32 +63,42 @@ function render(now) {
   const dt = document.hidden || paused ? 0 : Math.min(.05, (now - (lastTime || now)) / 1000);lastTime = now;
   clock += dt;
   if (asset) {
-    // Reduced motion still allows an explicitly requested walking preview.
-    mixer.update(reduced.matches && clip === 'Idle' ? 0 : dt);
-    expression.update(dt, { mood }, reduced.matches);
-    poseDuduFace(asset, expression.values, clock, reduced.matches);
+    if (sheep) {
+      const speed = clip === 'Walk' ? .42 : 0;distance += speed * dt;
+      asset.update(dt, clock, { mode: clip === 'Rest' ? 'sleep' : clip.toLowerCase(), speed, distance }, reduced.matches);
+    } else {
+      // Reduced motion still allows an explicitly requested walking preview.
+      mixer.update(reduced.matches && clip === 'Idle' ? 0 : dt);
+      expression.update(dt, { mood }, reduced.matches);
+      poseDuduFace(asset, expression.values, clock, reduced.matches);
+    }
   }
   orbit.update();renderer.render(scene, camera);
 }
 async function load() {
   $('loading').hidden = false;$('retry').hidden = true;
-  $('load-label').textContent = 'Getting Dudu ready…';
+  $('load-label').textContent = sheep ? 'Fluffing the sheep’s wool…' : 'Getting Dudu ready…';
   try {
-    asset = await loadDuduModel(event => {
+    const progress = event => {
       if (event.total) { $('load-progress').max = event.total;$('load-progress').value = event.loaded; }
-    });
-    asset.scene.scale.setScalar(.68);scene.add(asset.scene);
-    mixer = new THREE.AnimationMixer(asset.scene);chooseClip('Idle');
+    };
+    if (sheep) {
+      const { SheepModel, loadSheepTemplate } = await import('./blender-sheep.js');
+      asset = new SheepModel(await loadSheepTemplate(progress));
+    } else asset = await loadDuduModel(progress);
+    asset.scene.scale.setScalar(sheep ? .82 : .68);scene.add(asset.scene);
+    mixer = sheep ? asset.mixer : new THREE.AnimationMixer(asset.scene);chooseClip('Idle');
     $('controls').disabled = false;$('reset-camera').disabled = false;$('loading').hidden = true;
     if (import.meta.env.DEV) window.__duduStudio = {
-      snapshot: () => ({ ready: true, mood, clip, paused, time: clock, triangles: asset.triangles,
+      snapshot: () => ({ ready: true, animal: sheep ? 'sheep' : 'dudu', mood, clip, paused, time: clock, triangles: asset.triangles,
         bones: asset.bones.size, clips: asset.animations.map(a => a.name),
         weights: asset.faces.map(mesh => ({ name: mesh.name, keys: mesh.morphTargetDictionary, values: [...mesh.morphTargetInfluences] })),
-        leg: asset.bones.get('Leg_L').quaternion.toArray(), drawCalls: renderer.info.render.calls }),
-      front: () => { camera.position.set(0, 1.3, 5.3);orbit.target.set(0, .87, 0);orbit.update(); },
+        leg: asset.bones.get(sheep ? 'Leg_Front_L' : 'Leg_L').quaternion.toArray(),
+        neck: asset.bones.get('Neck')?.quaternion.toArray(), drawCalls: renderer.info.render.calls }),
+      front: () => { camera.position.set(0, sheep ? .95 : 1.3, sheep ? 4 : 5.3);orbit.target.set(0, sheep ? .6 : .87, 0);orbit.update(); },
     };
   } catch (error) {
-    console.error(error);$('load-label').textContent = 'Dudu couldn’t load. Check your connection and try again.';
+    console.error(error);$('load-label').textContent = `${characterName} couldn’t load. Check your connection and try again.`;
     $('retry').hidden = false;
   }
 }
