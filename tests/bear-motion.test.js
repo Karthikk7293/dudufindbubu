@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
-import { animateBearPose } from '../src/bear-motion.js';
+import { animateBearPose, turnBear } from '../src/bear-motion.js';
+import { BearExpression } from '../src/bear-expression.js';
 
 function bear(){
   const group=new THREE.Group();
@@ -27,4 +28,20 @@ test('pausing preserves the current pose and reduced motion keeps the torso stil
   const still=bear();
   for(let i=0;i<60;i++){still.position.z+=.1;animateBearPose(still,1/60,i/60,true,true);}
   assert.equal(still.userData.body.position.y,0);assert.equal(still.userData.body.rotation.z,0);assert.equal(still.userData.head.rotation.z,0);
+});
+test('shortest-angle turns match across frame rates and pause does not turn',()=>{
+  const a=bear(),b=bear();a.rotation.y=b.rotation.y=Math.PI-.1;
+  for(let i=0;i<60;i++)turnBear(a,-Math.PI+.1,1/60);
+  for(let i=0;i<30;i++)turnBear(b,-Math.PI+.1,1/30);
+  assert.ok(Math.abs(a.rotation.y-b.rotation.y)<1e-9);assert.ok(a.rotation.y>Math.PI);
+  const angle=a.rotation.y;turnBear(a,0,0);assert.equal(a.rotation.y,angle);
+});
+test('shy paws fold at the elbows and gestures release when movement resumes',()=>{
+  const model=bear(),data=model.userData;data.forearms=[new THREE.Group(),new THREE.Group()];data.expression=new BearExpression();
+  data.expression.react('shy',3);data.expression.update(.4,{},true);
+  for(let i=0;i<60;i++)animateBearPose(model,1/60,i/60,false);
+  assert.ok(data.forearms[0].rotation.x<-.7);assert.ok(data.arms[0].rotation.z>.6);
+  for(let i=0;i<60;i++){model.position.z+=4.6/60;animateBearPose(model,1/60,1+i/60,true);}
+  assert.ok(Math.abs(data.forearms[0].rotation.x)<.01);
+  assert.ok(Math.abs(data.arms[0].position.x+.52)<.01);
 });

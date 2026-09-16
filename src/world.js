@@ -1,7 +1,8 @@
 import * as THREE from 'three';
 import { currentScreen, forestQuality } from './screen-support.js';
 import { createAnimal, updateAnimal } from './wildlife.js';
-import { animateBearPose } from './bear-motion.js';
+import { animateBearPose, turnBear } from './bear-motion.js';
+import { BearExpression, applyBearFace, lookAtBearTarget } from './bear-expression.js';
 import { ForestAtmosphere } from './atmosphere.js';
 import { Companion, companionStart } from './companion.js';
 import { createForestTree, treeDimensions, buildFlowerBeds, buildButterflies, updateVegetation, batchFoliageMaterial } from './vegetation.js';
@@ -72,29 +73,36 @@ export function createBear(white=false) {
   // Project the low-set face onto the head so its details sit on the plush,
   // including when the bears turn sideways in the forest.
   const faceZ=(x,y)=>.69*Math.max(.01,1-Math.abs(x/.96)**(2/.88)-Math.abs(y/.79)**(2/.88))**(.88/2);
-  const eyes=[],happyEyes=[],ears=[];let pack;
+  const eyes=[],happyEyes=[],ears=[],cheeks=[],brows=[];let pack;
   [-1,1].forEach(side=>{
     const ear=new THREE.Group();ear.position.set(side*.68,.61,-.06);head.add(ear);ears.push(ear);
     plush(ear,white?dark:fur,0,0,0,.225,.23,.17);
     plush(ear,white?0x6c4c3d:0x805236,0,0,.172,.137,.146,.025);
-    const eye=ball(head,0x2f211f,side*.23,-.285,faceZ(side*.23,-.285)+.012,.060,.072,.029);eye.name='button-eye';eyes.push(eye);
+    const eye=ball(head,0x2f211f,side*.23,-.285,faceZ(side*.23,-.285)+.012,.060,.072,.029);eye.name='button-eye';eye.userData.side=side;eyes.push(eye);
     ball(eye,0xfff9ec,-.22,.27,.87,.20,.17,.14);
-    const happy=line(head,[[side*.23-.07,-.292,faceZ(side*.23-.07,-.292)+.025],[side*.23,-.26,faceZ(side*.23,-.26)+.026],[side*.23+.07,-.292,faceZ(side*.23+.07,-.292)+.025]],0x382720,.018);happy.visible=false;happyEyes.push(happy);
-    const cheek=plush(head,blush,side*.52,-.405,faceZ(side*.52,-.405)+.018,.158,.155,.03);cheek.rotation.y=side*.25;cheek.rotation.x=.18;
+    const happy=new THREE.Group();happy.position.set(side*.23,-.292,faceZ(side*.23,-.27)+.035);head.add(happy);
+    line(happy,[[-.07,0,0],[0,.032,.006],[.07,0,0]],0x382720,.018);happy.visible=false;happyEyes.push(happy);
+    const brow=new THREE.Group();brow.position.set(side*.23,-.14,faceZ(side*.23,-.09)+.027);head.add(brow);
+    line(brow,[[-.055,0,0],[0,.015,.003],[.055,0,0]],0x493028,.011);brow.visible=false;brows.push(brow);
+    const cheek=plush(head,blush,side*.52,-.405,faceZ(side*.52,-.405)+.018,.158,.155,.03);cheek.rotation.y=side*.25;cheek.rotation.x=.18;cheeks.push(cheek);
   });
-  plush(head,white?0xfff6e8:0xd9a46e,0,-.39,.643,.15,.098,.070);
-  ball(head,dark,0,-.365,.716,.039,.029,.023);
+  plush(head,white?0xfff6e8:0xd9a46e,0,-.375,.661,.105,.058,.035);
+  ball(head,dark,0,-.362,.705,.028,.020,.012);
   const smilePoints=[[-.076,-.385],[-.061,-.43],[-.025,-.432],[0,-.405],[.025,-.432],[.061,-.43],[.076,-.385]];
-  line(head,smilePoints.map(([x,y])=>[x,y,faceZ(x,y)+.075]),0x382720,.017);
+  const mouth=line(head,smilePoints.map(([x,y])=>[x,y-.025,faceZ(x,y-.025)+.115]),0x382720,.017);
+  const openMouth=mesh(new THREE.CircleGeometry(1,24),0x4d292b,head,0,-.468,.729,[.06,.06,1]);openMouth.visible=false;
+  const tongue=mesh(new THREE.CircleGeometry(1,16),0xe4a19b,openMouth,0,-.4,.006,[.58,.24,1]);
   // Small plush tufts with the blue/red bands visible in the reference.
   const tuft=new THREE.Group();tuft.position.set(0,.775,-.02);head.add(tuft);
   cylinder(tuft,white?0x9d5b57:0x4b798b,0,.04,0,.087,.087,.055,16);
   [-1,0,1].forEach(i=>{const lobe=plush(tuft,fur,i*.052,.13+(i===0?.035:0),0,.054,.105,.055);lobe.rotation.z=-i*.23;});
-  const arms=[],legs=[];
+  const arms=[],legs=[],forearms=[];
   [-1,1].forEach(side=>{
     const arm=new THREE.Group();arm.position.set(side*.52,.86,0);body.add(arm);
-    const paw=plush(arm,fur,side*.025,white?-.115:-.14,.025,.19,white?.26:.30,.205);paw.rotation.z=side*.16;
-    if(white)plush(arm,dark,side*.055,-.34,.055,.145,.092,.155);
+    plush(arm,fur,side*.02,-.085,.015,.175,.18,.19);
+    const elbow=new THREE.Group();elbow.position.set(side*.025,-.17,.025);arm.add(elbow);forearms.push(elbow);
+    plush(elbow,fur,0,-.055,.01,.185,white?.15:.18,.2);
+    if(white)plush(elbow,dark,0,-.155,.035,.15,.075,.16);
     arms.push(arm);
     const leg=new THREE.Group();leg.position.set(side*.28,.24,0);body.add(leg);
     plush(leg,fur,0,white?-.025:-.055,.025,.22,white?.175:.22,.25);
@@ -120,15 +128,10 @@ export function createBear(white=false) {
     [-1,1].forEach(side=>{plush(charm,0xfff7e9,side*.10,.29,.012,.045);plush(charm,0xfff7e9,side*.108,.085,0,.044,.075,.04);plush(charm,0xfff7e9,side*.052,-.088,.02,.046,.064,.045);ball(charm,dark,side*.043,.21,.087,.012);});
     ball(charm,dark,0,.17,.09,.017,.012,.008);
   }
-  root.userData={body,head,arms,legs,eyes,happyEyes,ears,pack,blinkOffset:white?2.2:0};return root;
+  root.userData={body,head,arms,forearms,legs,eyes,happyEyes,ears,cheeks,brows,mouth,openMouth,tongue,pack,expression:new BearExpression(),blinkOffset:white?2.2:0};return root;
 }
 
-export function animateBearFace(bear,time,happy=false,reducedMotion=false){
-  const {eyes,happyEyes,blinkOffset}=bear.userData;
-  // An occasional soft blink; birthday smiles are held rather than flashed.
-  const cycle=(time+blinkOffset)%5.8,blink=!reducedMotion&&cycle<.18?Math.max(.09,Math.abs(cycle-.09)/.09):1;
-  eyes.forEach(eye=>{eye.visible=!happy;eye.scale.y=.072*blink;});happyEyes.forEach(eye=>eye.visible=happy);
-}
+export function animateBearFace(bear,time,happy=false,reducedMotion=false){applyBearFace(bear,time,happy,reducedMotion);}
 
 function createGift(color) {
   const group=new THREE.Group();
@@ -463,9 +466,11 @@ export class ForestWorld {
       const actor=journey.bears[i],{position}=actor;bear.position.set(position.x,position.y,position.z);
       const climbing=['climbing','descending'].includes(journey.phase)&&journey.onLadder,watching=journey.phase==='stargazing';
       const heading=watching?Math.PI:actor.heading??Math.PI;
-      bear.rotation.y+=Math.atan2(Math.sin(heading-bear.rotation.y),Math.cos(heading-bear.rotation.y))*Math.min(1,dt*8);
+      turnBear(bear,heading,dt,8);
+      animateBearPose(bear,dt,this.time,actor.moving&&!climbing,this.reducedMotion,false);
       const cycle=journey.time*5+i*Math.PI,body=bear.userData;
-      body.body.position.y=0;body.head.rotation.z=0;body.head.rotation.x=watching?-.16:0;
+      body.body.position.y=0;body.body.position.x=0;body.body.rotation.set(0,0,0);body.head.rotation.z=0;body.head.rotation.x=watching?-.16:0;
+      body.forearms.forEach(arm=>arm.rotation.x=climbing?-.25:0);
       body.arms.forEach((arm,j)=>{arm.rotation.z=0;arm.rotation.x=climbing?-2.1+Math.sin(cycle+j*Math.PI)*.45:actor.moving?Math.sin(this.time*9+j*Math.PI)*.3:0;});
       body.legs.forEach((leg,j)=>{leg.rotation.x=climbing?Math.sin(cycle+j*Math.PI)*.5:actor.moving?Math.sin(this.time*9+j*Math.PI)*.4:0;});
       bear.userData.groundShadow.visible=!climbing&&!watching;
@@ -485,7 +490,7 @@ export class ForestWorld {
   }
   beginDeparture(){if(this.state.departed){this.story='exploring';this.dudu.visible=true;return;}this.story='departure';this.storyTime=0;this.dudu.visible=false;this.setCamera(true);}
   revealBubu(){if(!shouldRevealBubu(this.state)||this.cinematic)return;this.story='arrival';this.storyTime=0;this.bubu.visible=false;this.events.push('arrival-start');}
-  resetStory(){this.moonJourney=null;[this.dudu,this.bubu].forEach(b=>{b.userData.head.rotation.x=0;b.userData.groundShadow.visible=true;});this.story='ready';this.storyTime=0;this.companion=null;this.partyGifts?.removeFromParent();this.partyGifts=null;this.bubu.visible=false;this.bubu.position.set(BUBU.x,.25,BUBU.z);this.bubu.userData.arms.forEach(arm=>arm.rotation.set(0,0,0));this.dudu.visible=false;this.duduNest.door.rotation.y=0;this.bubuNest.door.rotation.y=0;this.events=[];this.overview=false;this.zoomView=this.mobile?25:27;this.beginDeparture();}
+  resetStory(){this.moonJourney=null;[this.dudu,this.bubu].forEach(b=>{b.userData.expression.reset();b.userData.lastPosition=null;b.userData.gait=b.userData.strideWeight=b.userData.runWeight=0;b.userData.body.position.set(0,0,0);b.userData.body.rotation.set(0,0,0);});[this.dudu,this.bubu].forEach(b=>{b.userData.head.rotation.x=0;b.userData.groundShadow.visible=true;});this.story='ready';this.storyTime=0;this.companion=null;this.partyGifts?.removeFromParent();this.partyGifts=null;this.bubu.visible=false;this.bubu.position.set(BUBU.x,.25,BUBU.z);this.bubu.userData.arms.forEach(arm=>arm.rotation.set(0,0,0));this.dudu.visible=false;this.duduNest.door.rotation.y=0;this.bubuNest.door.rotation.y=0;this.events=[];this.overview=false;this.zoomView=this.mobile?25:27;this.beginDeparture();}
   updateStory(dt){
     if(!this.cinematic)return;
     this.storyTime+=dt;
@@ -495,11 +500,11 @@ export class ForestWorld {
     const progress=THREE.MathUtils.clamp((this.storyTime-.45)/2.5,0,1),ease=progress*progress*(3-2*progress);
     nest.door.rotation.y=-1.55*Math.min(1,this.storyTime/.5)*(this.storyTime>3.1?Math.max(0,1-(this.storyTime-3.1)/.6):1);
     bear.visible=this.storyTime>.4;bear.position.set(THREE.MathUtils.lerp(nest.entry.x,target.x,ease),.23,THREE.MathUtils.lerp(nest.entry.z,target.z,ease));bear.rotation.y=0;
-    const cycle=this.storyTime*9;bear.userData.legs.forEach((leg,i)=>leg.rotation.x=Math.sin(cycle+i*Math.PI)*.45);bear.userData.arms.forEach((arm,i)=>arm.rotation.x=-Math.sin(cycle+i*Math.PI)*.3);bear.userData.body.position.y=Math.abs(Math.sin(cycle))*.075;
+    animateBearPose(bear,dt,this.time,progress>0&&progress<1,this.reducedMotion,false);
     if(this.storyTime>=3.7){
       nest.door.rotation.y=0;this.story='exploring';bear.userData.legs.forEach(leg=>leg.rotation.x=0);
       if(departure){this.state.departed=true;this.events.push('departed');}
-      else{this.state.bubuArrived=true;this.events.push('arrived');}
+      else{this.state.bubuArrived=true;this.bubu.userData.expression.react('shy',2.8);this.dudu.userData.expression.react('delighted',2);this.events.push('arrived');}
     }
   }
   get thirdPerson(){return this.playing&&this.cameraMode==='third-person'&&!this.overview;}
@@ -571,7 +576,7 @@ export class ForestWorld {
       batch.nodes.forEach(node=>node.removeFromParent());batch.geometries.forEach(geo=>geo.dispose());
     }
   }
-  collect(id){const gift=this.gifts.get(id);if(gift){gift.group.visible=false;gift.ring.visible=false;gift.sparkle.visible=false;}this.addBackpackGifts();}
+  collect(id){this.dudu.userData.expression.react('delighted',2.2);const gift=this.gifts.get(id);if(gift){gift.group.visible=false;gift.ring.visible=false;gift.sparkle.visible=false;}this.addBackpackGifts();}
   addBackpackGifts(){
     if(this.backpackGifts)this.dudu.userData.body.remove(this.backpackGifts);
     this.backpackGifts=new THREE.Group();this.dudu.userData.body.add(this.backpackGifts);
@@ -592,21 +597,23 @@ export class ForestWorld {
       const angle=rand()*Math.PI*2;heart.position.set(BUBU.x+(rand()-.5)*4,1+rand()*5,BUBU.z+(rand()-.5)*4);heart.scale.setScalar(.15+rand()*.2);heart.userData={speed:.5+rand(),phase:angle};this.scene.add(heart);this.confetti.push(heart);
     }
   }
-  updateParty(){
+  updateParty(dt){
     const t=this.storyTime,ease=Math.min(1,t/1.8),smooth=ease*ease*(3-2*ease);
     this.state.position.x=THREE.MathUtils.lerp(this.partyStart.x,BUBU.x-1.8,smooth);this.state.position.z=THREE.MathUtils.lerp(this.partyStart.z,BUBU.z+.5,smooth);
     this.dudu.position.set(this.state.position.x,.23,this.state.position.z);this.dudu.rotation.y=.9;this.bubu.rotation.y=.2;
-    const bounce=this.reducedMotion?0:Math.max(0,Math.sin(t*4))*.14*(t>4?1:.3);
     [this.dudu,this.bubu].forEach((bear,i)=>{
-      bear.userData.body.position.y=bounce;
-      bear.userData.arms.forEach((arm,j)=>{arm.rotation.x=0;arm.rotation.z=(j?1:-1)*(.3+(t>4?.25:0));});
-      bear.userData.legs.forEach((leg,j)=>leg.rotation.x=t<1.8?Math.sin(t*9+j*Math.PI+i)*.28:0);
-      bear.userData.head.rotation.z=this.reducedMotion?0:Math.sin(t*2+i)*.07;
+      animateBearPose(bear,dt,this.time,i===0&&t<1.8,this.reducedMotion);
+      if(t>3.4){
+        bear.userData.body.position.y=this.reducedMotion?0:Math.max(0,Math.sin((t-3.4)*4+i*.4))*.095;
+        bear.userData.head.rotation.z=this.reducedMotion?0:Math.sin(t*2+i)*.05;
+      }
     });
+    const wish=t>1.8&&t<3.4;
+    this.bubu.userData.body.rotation.x=wish&&!this.reducedMotion?Math.sin((t-1.8)/1.6*Math.PI)*.1:0;
     if(t>=3.4&&!this.partyWish){this.partyWish=true;this.candleFlame.visible=false;this.releaseConfetti();this.events.push('party-wish');}
     if(t>=8){
       this.state.completed=true;this.state.companionPosition={x:this.bubu.position.x,z:this.bubu.position.z};this.story='exploring';
-      [this.dudu,this.bubu].forEach(bear=>bear.userData.arms.forEach(arm=>arm.rotation.set(0,0,0)));
+      // Hold the final pose while the ending dialog is open; walking blends it out.
       this.beginTogether();this.events.push('party-finished');
     }
   }
@@ -619,9 +626,33 @@ export class ForestWorld {
     if(!this.companion||!this.playing||this.cinematic)return;
     const {moving,dx,dz}=this.companion.update(dt,this.state.position),pos=this.companion.position;
     this.bubu.position.set(pos.x,PONDS.some(p=>Math.abs(pos.z-p.z)<1&&Math.abs(pos.x-p.x)<5.6)?.48:.23,pos.z);
-    if(moving){const angle=Math.atan2(dx,dz),diff=Math.atan2(Math.sin(angle-this.bubu.rotation.y),Math.cos(angle-this.bubu.rotation.y));this.bubu.rotation.y+=diff*Math.min(1,dt*12);}
+    if(moving)turnBear(this.bubu,Math.atan2(dx,dz),dt);
     animateBearPose(this.bubu,dt,this.time,moving,this.reducedMotion);
     this.state.companionPosition={...pos};
+  }
+  shareMoment(){
+    if(!this.state.completed||this.cinematic)return;
+    this.dudu.userData.expression.react('content',3.2);this.bubu.userData.expression.react('shy',3.2);
+  }
+  updateBearExpressions(dt,moving){
+    const scripted=this.cinematic,time=this.storyTime+dt;
+    let duduMood='calm',bubuMood='calm',duduTarget=null,bubuTarget=null;
+    if(this.story==='party'){
+      duduMood=time<3.4?'content':'delighted';bubuMood=time<1.8?'surprised':time<3.4?'wish':'delighted';
+      duduTarget=this.bubu.position;bubuTarget=this.dudu.position;
+    }else if(this.story==='arrival'){
+      duduMood='content';bubuMood=time<2?'surprised':'shy';duduTarget=this.bubu.position;bubuTarget=this.dudu.position;
+    }else if(this.story==='moon'){
+      duduMood=bubuMood=this.moonJourney?.phase==='stargazing'?'wonder':'curious';
+    }else if(this.state.completed&&this.bubu.visible){
+      duduMood=moving?'calm':'content';bubuMood='content';
+      if(Math.hypot(this.dudu.position.x-this.bubu.position.x,this.dudu.position.z-this.bubu.position.z)<3.5){duduTarget=this.bubu.position;bubuTarget=this.dudu.position;}
+    }else{
+      let distance=4;
+      for(const gift of GIFTS){const d=Math.hypot(this.state.position.x-gift.x,this.state.position.z-gift.z);if(!this.state.collected.includes(gift.id)&&d<distance){distance=d;duduTarget=gift;duduMood='curious';}}
+    }
+    this.dudu.userData.expression.update(dt,{mood:duduMood,look:lookAtBearTarget(this.dudu,duduTarget),scripted},this.reducedMotion);
+    this.bubu.userData.expression.update(dt,{mood:bubuMood,look:lookAtBearTarget(this.bubu,bubuTarget),scripted},this.reducedMotion);
   }
   showGuidance(path){
     const dummy=new THREE.Object3D();dummy.rotation.x=-Math.PI/2;
@@ -685,8 +716,9 @@ export class ForestWorld {
     this.dudu.position.x=this.state.position.x;this.dudu.position.z=this.state.position.z;
     // Keep Dudu's feet on the bridge when crossing the pond.
     this.dudu.position.y=PONDS.some(p=>Math.abs(this.state.position.z-p.z)<1&&Math.abs(this.state.position.x-p.x)<5.6)?.48:.2;
-    animateBearPose(this.dudu,dt,t,moving,this.reducedMotion);
-    if(!this.companion)animateBearPose(this.bubu,dt,t,false,this.reducedMotion);
+    this.updateBearExpressions(dt,moving);
+    if(!this.cinematic||this.story==='arrival')animateBearPose(this.dudu,dt,t,moving&&!this.cinematic,this.reducedMotion);
+    if(!this.companion&&!this.cinematic)animateBearPose(this.bubu,dt,t,false,this.reducedMotion);
     this.animals.forEach(animal=>updateAnimal(animal,dt,t,this.playing?this.state.position:{x:99,z:99},(x,z)=>isWalkable(x,z,this.obstacles),this.nightBlend,this.reducedMotion));
     if(!this.reducedMotion){
       this.gifts.forEach(({group,ring,sparkle},id)=>{const phase=GIFTS.findIndex(g=>g.id===id);group.position.y=.4+Math.sin(t*2+phase)*.1;sparkle.position.y=1.92+Math.sin(t*2.5+phase)*.18;sparkle.rotation.y=t;ring.material.opacity=.5+Math.sin(t*2)*.12;});
@@ -704,7 +736,7 @@ export class ForestWorld {
     // Pausing must also preserve the bears' elevated positions in the nest.
     else if(this.story==='moon')this.updateMoonJourney(0);
     this.updateLighting(paused?0:dt);
-    [this.dudu,this.bubu].forEach(bear=>animateBearFace(bear,t,this.story==='party'&&this.storyTime>3.4,this.reducedMotion));
+    [this.dudu,this.bubu].forEach(bear=>animateBearFace(bear,t,false,this.reducedMotion));
     this.atmosphere.update(paused?0:dt,this.time,this.playing?this.state.position:{x:0,z:0},this.reducedMotion,this.nightBlend,this.weather.blend);
     this.rain.update(this.weather,this.playing?this.state.position:{x:0,z:0},this.nightBlend,this.reducedMotion);
     this.sky.update(paused?0:dt,t,this.nightBlend,this.reducedMotion,this.story==='moon'?this.moonJourney.progress:0,this.weather.blend);

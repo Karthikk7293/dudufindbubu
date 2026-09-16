@@ -19,7 +19,7 @@ export class MoonJourney {
     this.phase='descending';this.time=0;this.events.push('moon-descending');return true;
   }
   update(dt){
-    if(!this.valid||this.phase==='finished')return;
+    if(!Number.isFinite(dt)||dt<=0||!this.valid||this.phase==='finished')return;
     if(this.phase==='approaching'){
       for(const bear of this.bears){
         bear.moving=false;let travel=dt*3.4;
