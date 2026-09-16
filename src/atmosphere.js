@@ -32,16 +32,17 @@ export class ForestAtmosphere {
     this.fireflies=new THREE.Points(glowGeometry,new THREE.PointsMaterial({color:0xffed97,size:7,sizeAttenuation:false,map:glowTexture,transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending}));this.fireflies.frustumCulled=false;scene.add(this.fireflies);
 
   }
-  update(dt,time,position,reducedMotion,nightBlend=0) {
+  update(dt,time,position,reducedMotion,nightBlend=0,rain=0) {
     // Sparse snow follows the camera's part of the forest; sunshine stays warm.
     const t=reducedMotion?0:time;
+    this.snow.visible=rain<.15;
     const points=this.snow.geometry.attributes.position;
     this.flakes.forEach((flake,i)=>{
       if(!reducedMotion){flake.y-=dt*flake.speed;flake.x+=dt*(.38+Math.sin(time*.4)*.22);if(flake.y<.3)flake.y=17;if(flake.x>22)flake.x=-22;}
       points.setXYZ(i,position.x+flake.x+Math.sin(t*.45+i)*.3,flake.y,position.z+flake.z);
     });points.needsUpdate=true;
     this.birds.forEach(({group,left,right,phase,radius})=>{
-      group.visible=nightBlend<.65;
+      group.visible=nightBlend<.65&&rain<.55;
       const a=t*.085+phase;group.position.set(Math.cos(a)*radius,9+Math.sin(t*.4+phase)*.35+phase*.45,Math.sin(a)*radius);
       group.rotation.y=-a;group.rotation.z=Math.sin(t*.4+phase)*.12;
       left.rotation.z=Math.sin(t*7+phase)*.5;right.rotation.z=-left.rotation.z;
@@ -57,7 +58,7 @@ export class ForestAtmosphere {
     }this.petals.instanceMatrix.needsUpdate=true;
     const fireflies=this.fireflies.geometry.attributes.position;
     this.fireflyData.forEach(({x,z,phase},i)=>fireflies.setXYZ(i,x+Math.sin(t*.65+phase)*.8,.7+(Math.sin(t*.8+phase)+1)*.65,z+Math.cos(t*.5+phase)*.7));fireflies.needsUpdate=true;
-    this.fireflies.visible=nightBlend>.1;this.fireflies.material.opacity=nightBlend*(reducedMotion?.85:.75+Math.sin(t*1.2)*.15);
+    this.fireflies.visible=nightBlend>.1;this.fireflies.material.opacity=nightBlend*(1-rain*.8)*(reducedMotion?.85:.75+Math.sin(t*1.2)*.15);
 
   }
 }

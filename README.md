@@ -40,6 +40,7 @@ The game runs entirely in the browser. The published files include its fonts and
 - **+ / − or mouse wheel:** zoom in / out
 - **0 / overview button:** see the whole forest or follow Dudu
 - **T / sun–moon button:** switch between day and night (also available before play and in the pause menu)
+- **V / weather button:** switch between clear skies and gentle rain
 - **Escape / P:** pause (Escape also exits native browser fullscreen)
 - **Phone / tablet:** drag the thumbstick; tap the heart to collect or talk; pinch with two fingers to zoom
 
@@ -57,17 +58,21 @@ The trees have textured bark, tapering branch forks, pointed leaves, and uneven 
 
 Use the **sun–moon button** or **T** to change the time of day. Night brings a moon and twinkling stars, occasional shooting stars, roadside lanterns, glowing nest windows, and fireflies. Day brings the sun, birds, and butterflies back. Lighting fades smoothly between modes. Reduced-motion settings keep decorative movement still and switch lighting immediately. Your day/night preference survives refreshing or restarting the adventure; changing it in the pause menu keeps the game paused.
 
-The playground fills the viewport when play starts and requests native browser fullscreen where supported. Only compact gift guidance, day/night, bag, map, pause, and zoom controls stay visible. Sound, help, fullscreen, and restart are available from the pause menu.
+The **weather button** (or **V**) brings gentle rain to the forest. The palette uses sage greens, warm earth, and blue-grey overcast light, inspired by the user's [rainy scene reference](https://www.instagram.com/reel/DdQjknbt66F/). Fine procedural grain textures the grass and paths; rain darkens the ground, adds shallow puddles and expanding rings on puddles and ponds, and dims the sun. Roadside lamps glow softly in rainy daylight. Rain and day/night can be combined independently. Snow, birds, and butterflies give way to rain; leaves sway more in the breeze. These are original 3D effects, not extracted reel assets or real-time mirror reflections.
+
+Weather changes fade during play and apply immediately from the pause menu without resuming the adventure. The setting is remembered, while refreshing still resets the gift hunt. Phones use half the rain particles; streaks, puddles, and ripples use three batched draws. Reduced motion keeps the wet surfaces and overcast lighting while hiding falling rain and expanding ripples. A synthesized stereo rain layer fades in when sound is enabled; no audio is downloaded from Instagram.
+
+The playground fills the viewport when play starts and requests native browser fullscreen where supported. Only compact gift guidance, day/night, weather, bag, map, pause, and zoom controls stay visible. Sound, help, fullscreen, and restart are available from the pause menu.
 
 Bubu stays inside until **all eight gifts are collected and Dudu reaches her clearing**. Visiting early keeps her door closed. When she walks outside, choose **Celebrate Bubu’s birthday** (or press E nearby) to start the party: Dudu sets down the gifts, Bubu makes a candle wish, and both enjoy music and heart confetti. After the party, choose **Walk together**. Bubu follows Dudu around trees and over bridges, and you can stop to share a little moment.
 
 After the party, the pointer leads to the **Moonwatch nest** in the northwestern forest. At the ladder, press **E** or tap **Climb to the moon nest together**. Both bears walk to the ladder, then climb as daylight gradually turns to night. The camera rises with them to an open nest with a moon, clouds, stars, and shooting stars. Stay as long as you like; choose **Climb down together** to return to the paths. Pause and restart work during the climb. The moon visit keeps the rest of this adventure at night; it does not overwrite your saved day/night preference.
 
-**Refreshing always starts a new adventure:** Dudu returns to his nest, the bag is empty, Bubu stays inside, and the birthday and companion walk reset. Progress is kept only while this page remains open. Older stored progress is cleared. Sound and day/night preferences remain saved. The pause menu’s restart button also starts over.
+**Refreshing always starts a new adventure:** Dudu returns to his nest, the bag is empty, Bubu stays inside, and the birthday and companion walk reset. Progress is kept only while this page remains open. Older stored progress is cleared. Sound, weather, and day/night preferences remain saved. The pause menu’s restart button also starts over.
 
 ## Audio and artwork
 
-The forest, characters, objects, UI icons, and animation are custom code-built assets. Music, forest ambience, birds, footsteps, gift chimes, and cute character chirps are generated with Web Audio. Sound begins after pressing Play or the sound button, as required by browsers. These are **original synthesized sounds, not the Instagram characters’ recorded voices**. The plush character models are refined from the user’s [look reference](https://www.instagram.com/reel/Dar3t6FNPJT/): oversized rounded heads, short bodies and limbs, tiny low-set eyes and smiles, Dudu’s honey cheeks and Bubu’s white face, pink cheeks, dark ear and paw tips, and bow tie. They have subtle fur shading, softly defined muzzles, eye highlights, occasional blinks, and smiling eyes during the birthday party. Walking steps follow distance traveled, with gentle breathing, arm swings, and ear movements. Wildlife alternates between short walks, grazing, and rests; rabbits hop, nearby animals look up and retreat, and animals settle down at night. These are stylized characters rather than photorealistic models. Dudu keeps his gift backpack with a little white-bear charm. Local visual references are documented in `references/characters/README.md`. No assets or code are copied from Messenger.
+The forest, characters, objects, UI icons, and animation are custom code-built assets. Music, forest ambience, birds, footsteps, gift chimes, and cute character chirps are generated with Web Audio. Sound begins after pressing Play or the sound button, as required by browsers. These are **original synthesized sounds, not the Instagram characters’ recorded voices**. The plush character models are refined from the user’s [look reference](https://www.instagram.com/reel/Dar3t6FNPJT/): oversized rounded heads, short bodies and limbs, tiny low-set eyes and smiles, Dudu’s honey cheeks and Bubu’s white face, pink cheeks, dark ear and paw tips, and bow tie. They have subtle fur shading, softly defined muzzles, eye highlights, occasional blinks, and smiling eyes during the birthday party. Walking steps follow distance traveled, with gentle breathing, arm swings, and ear movements. Strides ease in and out, with a small body lean and head counterturn when changing direction. Butterflies bank gently and face their flight paths. Wildlife alternates between short walks, grazing, and rests; rabbits hop, nearby animals look up and retreat, and animals settle down at night. These are stylized characters rather than photorealistic models. Dudu keeps his gift backpack with a little white-bear charm. Local visual references are documented in `references/characters/README.md`. No assets or code are copied from Messenger.
 
 Night ambience adds gentle synthesized cricket chirps and occasional owl calls when sound is enabled.
 
@@ -81,6 +86,7 @@ npm run preview
 npm test
 npm run test:browser
 npm run test:mobile
+npm run test:weather
 npm run test:interaction
 npm run test:browser -- --refinements
 npm run test:browser -- --characters
@@ -107,3 +113,5 @@ The moon-nest browser check covers tablet rendering, actual forest routes, climb
 The interactive engine study is preserved at **`/engine.html`** in both development and the Vercel build. The forest is the homepage. See [ENGINE.md](./ENGINE.md) for assembly, inspection, and experimental webcam hand controls. Engine modules and tracking assets are loaded only by that page.
 
 The mobile check exercises portrait entry, a denied orientation lock, landscape touch controls, simultaneous movement and camera swipes, pinch zoom, cancelled touches, dialog restoration after rotation, gift collection, night mode, small landscape screens, and a fresh adventure after refresh. `node tests/forest-story.mjs` checks arrival, celebration, pausing, and companion walking; `node tests/deployment.browser.mjs` checks both built pages against a preview server on port 4174 (`PREVIEW_URL` overrides it). `node tests/forest-visuals.mjs` captures the bear, wildlife, and tree studies.
+
+The weather check covers rainy phone rendering, pause and weather controls, rainy night lighting, the five-action HUD at 568 × 320, preference restoration with a fresh adventure, and reduced motion. Unit checks cover weather timing, paused rain, bounded particles, phone particle limits, wet materials, and world-space texture scale.

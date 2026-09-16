@@ -14,6 +14,7 @@ let state=freshState();
 try{localStorage.removeItem(SAVE_KEY);}catch{/* Storage is optional. */}
 // Explicit browser-test fixtures are only accepted in a development build.
 if(import.meta.env.DEV&&window.__DUDU_TEST_STATE__){state=restoreState(JSON.stringify(window.__DUDU_TEST_STATE__));delete window.__DUDU_TEST_STATE__;}
+let weatherMode='clear';try{if(localStorage.getItem('dudu-weather')==='rain')weatherMode='rain';}catch{}
 let timeOfDay='day';try{if(localStorage.getItem('dudu-time-of-day')==='night')timeOfDay='night';}catch{}
 let world, ready=false, playing=false, nearby=null, route=[], toastTimer, speechTimer, speechBear='dudu', lastTime=0, stepTime=0, mapTime=0, wasPaused=false, fullscreenTransition=false;
 let guidedId=null,inspectedGift=null,guideTarget=null,guidePath=[],guideTime=0,guideOrigin=null;
@@ -48,9 +49,27 @@ function updateTimeControls(){
 function toggleTime(){
   if(!world||world.story==='moon')return;timeOfDay=timeOfDay==='day'?'night':'day';world.setTimeOfDay(timeOfDay,isPaused());audio.setNight(timeOfDay==='night');updateTimeControls();
   try{localStorage.setItem('dudu-time-of-day',timeOfDay);}catch{}
-  if(playing&&!isPaused())toast(timeOfDay==='night'?'Moonlit paths, little lanterns, and wishes among the stars.':'Hello, sunshine. The butterflies are back. ♡',3800);
+  if(playing&&!isPaused())toast(timeOfDay==='night'?'Moonlit paths, little lanterns, and wishes among the stars.':weatherMode==='rain'?'A rainy morning in the woods. ♡':'Hello, sunshine. The butterflies are back. ♡',3800);
 }
 ['intro-time','play-time','pause-time'].forEach(id=>$(id).addEventListener('click',toggleTime));updateTimeControls();
+function updateWeatherControls(){
+  const rainy=weatherMode==='rain',label=rainy?'Clear the sky':'Start gentle rain';
+  $('app').classList.toggle('rainy',rainy);
+  ['intro-weather','play-weather','pause-weather'].forEach(id=>{
+    const button=$(id),caption=id==='intro-weather'?(rainy?'Gentle rain':'Clear skies'):label;
+    button.innerHTML=(rainy?icons.rain:icons.cloudSun)+(id==='play-weather'?'':`<span>${caption}</span>`);
+    button.setAttribute('aria-label',label);button.setAttribute('aria-pressed',String(rainy));button.title=`${label} (V)`;
+  });
+}
+function toggleWeather(){
+  if(!world||!ready)return;
+  weatherMode=weatherMode==='clear'?'rain':'clear';world.setWeather(weatherMode,isPaused());
+  audio.setRain(weatherMode==='rain');updateWeatherControls();
+  try{localStorage.setItem('dudu-weather',weatherMode);}catch{}
+  if(playing&&!isPaused())toast(weatherMode==='rain'?'A little rain, a softer forest. ♡':'The clouds are clearing. ♡');
+}
+['intro-weather','play-weather','pause-weather'].forEach(id=>$(id).addEventListener('click',toggleWeather));updateWeatherControls();
+
 
 function openDialog(id){
   clearInputs();
@@ -179,7 +198,7 @@ function updateUI(){
 async function start(){
   if(!world||!ready||playing||isPaused())return;
   playing=true;world.playing=true;$('app').classList.add('playing');
-  ['intro','world-caption','dudu-label','intro-footer'].forEach(hide);
+  ['intro','intro-weather','world-caption','dudu-label','intro-footer'].forEach(hide);
   ['play-tools','zoom-tools','touch-controls'].forEach(show);
   if(!matchMedia('(pointer: coarse)').matches)$('touch-controls').classList.add('hidden');
   $('world').focus({preventScroll:true});
@@ -253,6 +272,7 @@ window.addEventListener('keydown',event=>{
   if(k==='+'||k==='='){event.preventDefault();zoom(1/1.25);}
   if(k==='-'||k==='_'){event.preventDefault();zoom(1.25);}
   if(k==='0'){event.preventDefault();overview();}
+  if(k==='v'){event.preventDefault();toggleWeather();}
   if(k==='t'){event.preventDefault();toggleTime();}
   if(k==='c'){event.preventDefault();changeCamera();}
   if(k==='r'){event.preventDefault();recenter();}
@@ -408,11 +428,12 @@ export async function initialize(progress){
   world=new ForestWorld($('world'),state);
   await world.initialize(progress);
   world.setTimeOfDay(timeOfDay,true);audio.setNight(timeOfDay==='night');
+  world.setWeather(weatherMode,true);audio.setRain(weatherMode==='rain');
   // Saves from an older forest layout must not trap a returning player.
   if(!isWalkable(state.position.x,state.position.z,world.obstacles))state.position={...START};
   world.addBackpackGifts();updateUI();updateSoundButton();
   await world.warmUp(progress);
   ready=true;$('start-button').disabled=false;lastTime=performance.now();requestAnimationFrame(animate);
   // Read-only state for browser diagnostics, with ordinary input driving tests.
-  if(import.meta.env.DEV)window.__dudu={snapshot:()=>JSON.parse(JSON.stringify({state,ready,playing,paused:isPaused(),camera:{mode:world.cameraMode,perspective:!!world.camera.isPerspectiveCamera,position:world.camera.position,target:world.story==='moon'?world.moonLook:world.thirdPerson?world.follow.target:world.cameraTarget,yaw:world.movementYaw,pitch:world.follow.pitch,fov:world.camera.fov,distance:world.follow.distance,arm:world.follow.arm,avoidYaw:world.follow.avoidYaw,avoidPitch:world.follow.avoidPitch},nearby:nearby?.id,position:state.position,obstacles:world.obstacles,sound:audio.enabled,route:route.length,render:world.renderer.info.render,quality:world.quality,time:world.time,view:world.viewSize,zoom:world.cameraMode==='third-person'?world.follow.distance:world.zoomView,overview:world.overview,story:world.story,bubuVisible:world.bubu.visible,bubuPosition:world.bubu.position,duduPosition:world.dudu.position,animals:world.animals.map(a=>({kind:a.kind,x:a.group.position.x,z:a.group.position.z,action:a.brain.mode})),balloons:world.balloons.length,worldRadius:WORLD_RADIUS,timeOfDay:world.timeOfDay,nightBlend:world.nightBlend,trees:world.treeKinds,treeSizes:world.treeSizes,bearScale:world.dudu.scale.x,moonJourney:world.moonJourney?{phase:world.moonJourney.phase,progress:world.moonJourney.progress}:null,flowerBeds:world.flowerBeds,butterflies:world.butterflies.map(b=>b.kind),lamps:{count:world.roadLighting.sites.length,sites:world.roadLighting.sites,glowing:world.roadLighting.glass.emissiveIntensity,lights:world.roadLighting.lights.map(l=>l.intensity)},guidance:guideTarget?{id:guideTarget.id,path:guidePath}:null,following:!!world.companion,partyTime:world.storyTime,candleLit:world.candleFlame.visible,weather:{snow:world.atmosphere.flakes.length,birds:world.atmosphere.birds.map(b=>({x:b.group.position.x,y:b.group.position.y,z:b.group.position.z})),windLeaves:world.atmosphere.leaves.count,sun:world.sky.sun.visible,moon:world.sky.moon.visible,clouds:world.sky.clouds.length,stars:world.sky.stars.geometry.attributes.position.count,shootingStar:world.sky.meteor.visible,nightTime:world.sky.nightTime,fireflies:world.atmosphere.fireflies.visible?world.atmosphere.fireflyData.length:0,petals:world.atmosphere.petals.count}})),project:(x,z,y=0)=>{const point=new THREE.Vector3(x,y,z).project(world.camera),rect=$('world').getBoundingClientRect();return{x:rect.left+(point.x*.5+.5)*rect.width,y:rect.top+(-point.y*.5+.5)*rect.height};}};
+  if(import.meta.env.DEV)window.__dudu={snapshot:()=>JSON.parse(JSON.stringify({state,ready,playing,paused:isPaused(),camera:{mode:world.cameraMode,perspective:!!world.camera.isPerspectiveCamera,position:world.camera.position,target:world.story==='moon'?world.moonLook:world.thirdPerson?world.follow.target:world.cameraTarget,yaw:world.movementYaw,pitch:world.follow.pitch,fov:world.camera.fov,distance:world.follow.distance,arm:world.follow.arm,avoidYaw:world.follow.avoidYaw,avoidPitch:world.follow.avoidPitch},nearby:nearby?.id,position:state.position,obstacles:world.obstacles,sound:audio.enabled,route:route.length,render:world.renderer.info.render,quality:world.quality,time:world.time,view:world.viewSize,zoom:world.cameraMode==='third-person'?world.follow.distance:world.zoomView,overview:world.overview,story:world.story,bubuVisible:world.bubu.visible,bubuPosition:world.bubu.position,duduPosition:world.dudu.position,animals:world.animals.map(a=>({kind:a.kind,x:a.group.position.x,z:a.group.position.z,action:a.brain.mode})),balloons:world.balloons.length,worldRadius:WORLD_RADIUS,timeOfDay:world.timeOfDay,nightBlend:world.nightBlend,trees:world.treeKinds,treeSizes:world.treeSizes,bearScale:world.dudu.scale.x,moonJourney:world.moonJourney?{phase:world.moonJourney.phase,progress:world.moonJourney.progress}:null,flowerBeds:world.flowerBeds,butterflies:world.butterflies.map(b=>b.kind),lamps:{count:world.roadLighting.sites.length,sites:world.roadLighting.sites,glowing:world.roadLighting.glass.emissiveIntensity,lights:world.roadLighting.lights.map(l=>l.intensity)},guidance:guideTarget?{id:guideTarget.id,path:guidePath}:null,following:!!world.companion,partyTime:world.storyTime,candleLit:world.candleFlame.visible,weather:{mode:world.weather.mode,blend:world.weather.blend,time:world.weather.time,rain:world.rain.streaks.visible?world.rain.drops.length:0,puddles:world.rain.puddles.visible?world.rain.sites.length:0,ripples:world.rain.ripples.visible?world.rain.rippleSites.length:0,audioRain:!!audio.raining,snowVisible:world.atmosphere.snow.visible,snow:world.atmosphere.flakes.length,birds:world.atmosphere.birds.map(b=>({x:b.group.position.x,y:b.group.position.y,z:b.group.position.z})),windLeaves:world.atmosphere.leaves.count,sun:world.sky.sun.visible,moon:world.sky.moon.visible,clouds:world.sky.clouds.length,stars:world.sky.stars.geometry.attributes.position.count,shootingStar:world.sky.meteor.visible,nightTime:world.sky.nightTime,fireflies:world.atmosphere.fireflies.visible?world.atmosphere.fireflyData.length:0,petals:world.atmosphere.petals.count}})),project:(x,z,y=0)=>{const point=new THREE.Vector3(x,y,z).project(world.camera),rect=$('world').getBoundingClientRect();return{x:rect.left+(point.x*.5+.5)*rect.width,y:rect.top+(-point.y*.5+.5)*rect.height};}};
 }

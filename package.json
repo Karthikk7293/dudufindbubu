@@ -11,6 +11,7 @@
     "test:browser": "node tests/browser.mjs",
     "test:interaction": "node tests/browser.mjs --interaction",
     "test:camera": "node tests/engine.browser.mjs --camera",
+    "test:weather": "node tests/weather.browser.mjs",
     "test:mobile": "node tests/mobile.browser.mjs",
     "test:engine": "node tests/engine.browser.mjs",
     "test:engine:inputs": "node tests/engine.inputs.mjs",

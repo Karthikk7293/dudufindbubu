@@ -62,6 +62,7 @@
       <main id="game-shell">
         <div id="world" role="application" tabindex="0" aria-label="Sunnywood forest adventure. Use arrow keys or W A S D to move Dudu, E to collect a nearby gift, M for the map, and Escape to pause."></div>
         <div class="scene-grain" aria-hidden="true"></div>
+        <button id="intro-weather" class="weather-chip" aria-label="Start gentle rain" aria-pressed="false"></button>
 
         <section class="intro" id="intro" aria-labelledby="intro-title">
           <div class="eyebrow"><span class="little-flower">✳</span> A SMALL ADVENTURE WITH A BIG HEART</div>
@@ -96,6 +97,7 @@
 
         <nav id="play-tools" class="play-tools hidden" aria-label="Adventure controls">
           <button id="play-time" class="floating-button" aria-label="Switch to night mode" aria-pressed="false" title="Day / night (T)"></button>
+          <button id="play-weather" class="floating-button" aria-label="Start gentle rain" aria-pressed="false" title="Sunshine / rain (V)"></button>
           <button id="play-bag" class="floating-button" aria-label="Open gift bag" title="Gift bag (B)"><span id="play-bag-icon"></span><small id="collected-count">0</small></button>
           <button id="play-map" class="floating-button" aria-label="Open forest map" title="Map (M)"></button>
           <button id="play-pause" class="floating-button" aria-label="Pause adventure" title="Pause (Escape)"></button>
@@ -136,7 +138,7 @@
         <button class="dialog-close" data-close aria-label="Close">×</button>
         <span class="dialog-flower">✳</span><div class="eyebrow">A FEW LITTLE POINTERS</div><h2>A walk in the woods.</h2>
         <p>Gather all eight birthday gifts before visiting Bubu’s nest. Only then will she come outside! Follow the glowing trail, or select a missing gift in your bag to track it. Tap the gift pointer to walk there.</p>
-        <div class="control-list"><div><span><kbd>W A S D</kbd> / <kbd>↑ ← ↓ →</kbd></span><span>Wander around</span></div><div><kbd>SHIFT</kbd><span>Run a little faster</span></div><div><kbd>E</kbd><span>Pick up a gift / talk to Bubu</span></div><div><kbd>M</kbd><span>Open your forest map</span></div><div><kbd>B</kbd><span>Open the gift bag</span></div><div><kbd>+ / −</kbd><span>Zoom in / out</span></div><div><kbd>0</kbd><span>See the whole forest</span></div><div><kbd>T</kbd><span>Switch day / night</span></div><div><kbd>ESC</kbd><span>Pause & take a breath</span></div></div>
+        <div class="control-list"><div><span><kbd>W A S D</kbd> / <kbd>↑ ← ↓ →</kbd></span><span>Wander around</span></div><div><kbd>SHIFT</kbd><span>Run a little faster</span></div><div><kbd>E</kbd><span>Pick up a gift / talk to Bubu</span></div><div><kbd>M</kbd><span>Open your forest map</span></div><div><kbd>B</kbd><span>Open the gift bag</span></div><div><kbd>+ / −</kbd><span>Zoom in / out</span></div><div><kbd>0</kbd><span>See the whole forest</span></div><div><kbd>T</kbd><span>Switch day / night</span></div><div><kbd>V</kbd><span>Sunshine / gentle rain</span></div><div><kbd>ESC</kbd><span>Pause & take a breath</span></div></div>
         <div class="control-list camera-help"><div><kbd>C</kbd><span>Third person / overhead view</span></div><div><kbd>R</kbd><span>Look from behind Dudu</span></div><div><kbd>J / L · I / K</kbd><span>Rotate / tilt the camera</span></div><div><span>Drag / swipe the forest</span><span>Look around in third person</span></div></div>
         <p class="dialog-footnote">At the picnic, choose “Celebrate Bubu’s birthday”, then wander together. Click or tap the ground to walk; drag to look around and scroll to zoom. On a phone or tablet, use the thumbstick to walk, swipe the forest to look, tap the heart to interact, and pinch to zoom. Turn phones sideways to play. After the birthday, follow the moon pointer and climb the Moonwatch tree together. Watch the stars from the nest, then choose “Climb down together” to keep exploring. Refreshing starts a fresh adventure with an empty gift bag.</p><button class="primary-button" data-close>Got it. Let’s wander <span>↗</span></button>
       </dialog>
@@ -148,7 +150,7 @@
       </dialog>
 
       <dialog id="pause-dialog" class="paper-dialog">
-        <button class="dialog-close" data-close aria-label="Resume game">×</button><span class="dialog-flower">☁</span><div class="eyebrow">NO NEED TO HURRY</div><h2>A little breather.</h2><p>The forest will be right here.<br/>Your birthday surprises are safely in your bag.</p><button class="primary-button" data-close>Keep wandering <span>↗</span></button><div class="pause-options"><button id="pause-sound" class="menu-option">Sound on</button><button id="pause-time" class="menu-option" aria-pressed="false">Switch to night mode</button><button id="pause-help" class="menu-option">How to play</button><button id="fullscreen-button" class="menu-option">Enter full screen</button></div><button class="text-button" id="restart-button">Start a fresh adventure</button>
+        <button class="dialog-close" data-close aria-label="Resume game">×</button><span class="dialog-flower">☁</span><div class="eyebrow">NO NEED TO HURRY</div><h2>A little breather.</h2><p>The forest will be right here.<br/>Your birthday surprises are safely in your bag.</p><button class="primary-button" data-close>Keep wandering <span>↗</span></button><div class="pause-options"><button id="pause-sound" class="menu-option">Sound on</button><button id="pause-time" class="menu-option" aria-pressed="false">Switch to night mode</button><button id="pause-weather" class="menu-option" aria-pressed="false">Start gentle rain</button><button id="pause-help" class="menu-option">How to play</button><button id="fullscreen-button" class="menu-option">Enter full screen</button></div><button class="text-button" id="restart-button">Start a fresh adventure</button>
       </dialog>
 
       <dialog id="ending-dialog" class="paper-dialog ending-dialog">

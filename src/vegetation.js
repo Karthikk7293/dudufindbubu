@@ -177,4 +177,4 @@ export function buildButterflies(scene,beds){
   }
   return butterflies;
 }
-export function updateVegetation(time,reducedMotion){wind.time.value=time;wind.strength.value=reducedMotion?0:1;}
+export function updateVegetation(time,reducedMotion,rain=0){wind.time.value=time;wind.strength.value=reducedMotion?0:1+rain*(.4+Math.sin(time*.65)*.2);}

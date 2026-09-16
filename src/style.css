@@ -102,3 +102,13 @@
 .moon-caption{position:absolute;left:50%;bottom:112px;transform:translateX(-50%);text-align:center;pointer-events:none;color:#fff4d8;text-shadow:0 2px 12px #0b173e;z-index:2;max-width:560px;width:75%}.moon-caption>span{display:block;font-size:9px;letter-spacing:3px;color:#d8c69e}.moon-caption strong{display:block;font:500 27px/1.3 var(--serif);margin:10px 0}.moon-caption small{font-size:12px;line-height:1.7;color:#e0dfdc}.moon-visit .zoom-tools,.moon-visit .touch-controls{display:none!important}.moon-visit .interact{bottom:32px}.moon-visit .toast{bottom:210px}
 @media(pointer:coarse) and (min-width:768px){.zoom-tools{bottom:170px}.playing .interact{bottom:185px}.playing .toast{bottom:260px}.moon-visit .interact{bottom:32px}.floating-button{width:46px;height:46px}.zoom-tools button{min-height:40px}.guide-card{max-width:280px}}
 .moon-caption{left:auto;right:32px;top:110px;bottom:auto;width:320px;max-width:40%;transform:none;text-align:right}.moon-caption strong{font-size:25px}.moon-caption small{font-size:11px}
+
+/* Weather belongs to the forest; the same control remains available during play. */
+.weather-chip{position:absolute;top:18px;right:24px;z-index:3;display:flex;align-items:center;gap:8px;min-height:44px;padding:0 16px;border:1px solid #d2dbce;background:#f7f7eeeb;border-radius:24px;color:#586e60;font-size:11px;box-shadow:0 3px 12px #3146300a}
+.weather-chip svg{width:19px;height:19px}.night .weather-chip{background:#283b51ed;border-color:#536679;color:#e1ded1}
+.rainy .sunlight{opacity:0}.rainy .scene-grain{opacity:.12}
+.rainy .intro{background:radial-gradient(ellipse at 10% 30%,#dbe5e2e8,transparent 80%)}
+.night.rainy .intro{background:radial-gradient(ellipse at 10% 30%,#16253bdb,transparent 80%)}
+#play-weather[aria-pressed=true]{background:#dfeaf0;color:#486674}.night #play-weather[aria-pressed=true]{background:#344d64;color:#ebeff0}
+@media(max-width:760px){.weather-chip{right:16px;top:12px;font-size:10px;padding:0 12px}}
+@media(prefers-reduced-motion:reduce){.weather-chip,.sunlight{transition:none}}

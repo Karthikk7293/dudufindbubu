@@ -8,7 +8,7 @@ export class ForestAudio {
         if (!AudioContext) return false;
         this.ctx=new AudioContext(); this.master=this.ctx.createGain(); this.master.gain.value=0;
         this.master.connect(this.ctx.destination);
-        this.createBreeze();
+        this.createBreeze();this.createRain();
       }
       await this.ctx.resume(); this.enabled=true;
       this.master.gain.setTargetAtTime(this.paused ? .15 : .45,this.ctx.currentTime,.25);
@@ -17,6 +17,21 @@ export class ForestAudio {
     } catch { return false; }
   }
   mute() { this.enabled=false; if(this.ctx) this.master.gain.setTargetAtTime(0,this.ctx.currentTime,.12); }
+  setRain(value){
+    this.raining=value;
+    if(this.rainGain)this.rainGain.gain.setTargetAtTime(value?.19:0,this.ctx.currentTime,.8);
+  }
+  createRain(){
+    const buffer=this.ctx.createBuffer(2,this.ctx.sampleRate*4,this.ctx.sampleRate);
+    for(let channel=0;channel<2;channel++){
+      const data=buffer.getChannelData(channel);let smooth=0;
+      for(let i=0;i<data.length;i++){smooth=smooth*.65+(Math.random()*2-1)*.35;data[i]=smooth*(.8+.2*Math.sin(i/this.ctx.sampleRate*1.7+channel));}
+    }
+    const source=this.ctx.createBufferSource();source.buffer=buffer;source.loop=true;
+    const filter=this.ctx.createBiquadFilter();filter.type='lowpass';filter.frequency.value=3800;
+    this.rainGain=this.ctx.createGain();this.rainGain.gain.value=this.raining?.19:0;
+    source.connect(filter);filter.connect(this.rainGain);this.rainGain.connect(this.master);source.start();
+  }
   setNight(value){this.night=value;}
   setPaused(value) { this.paused=value; if(this.ctx && this.enabled) this.master.gain.setTargetAtTime(value?.12:.45,this.ctx.currentTime,.3); }
   tone(frequency, time, duration=.4, gain=.1, type='sine', endFrequency) {
@@ -58,7 +73,7 @@ export class ForestAudio {
     if(!this.paused){
       if(this.night&&this.note%12===2){for(let i=0;i<4;i++)this.tone(2300+i*60,now+i*.075,.045,.009,'sine',2100);}
       if(this.night&&this.note%89===20){this.tone(290,now,.4,.025,'sine',220);this.tone(250,now+.5,.55,.018,'sine',190);}
-      if(!this.night&&this.note%29===8)this.bird();
+      if(!this.night&&!this.raining&&this.note%29===8)this.bird();
     }
     this.note++;
   }

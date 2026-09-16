@@ -6,6 +6,9 @@ import { ForestAtmosphere } from './atmosphere.js';
 import { Companion, companionStart } from './companion.js';
 import { createForestTree, treeDimensions, buildFlowerBeds, buildButterflies, updateVegetation, batchFoliageMaterial } from './vegetation.js';
 import { ForestSky } from './sky.js';
+import { WeatherState } from './weather-state.js';
+import { ForestRain } from './rain.js';
+import { ForestSurfaces } from './forest-surfaces.js';
 import { RoadLighting } from './road-lighting.js';
 import { FollowCamera } from './follow-camera.js';
 import { buildMoonNest } from './moon-nest.js';
@@ -13,7 +16,7 @@ import { MoonJourney } from './moon-journey.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { GIFTS, BUBU, START, DUDU_NEST, BUBU_NEST, MOON_NEST, WORLD_RADIUS, TRAILS, PONDS, clampZoom, isWalkable, shouldRevealBubu, canCelebrate } from './game-state.js';
 
-const COLORS={grass:0xb6c883,edge:0x96ad6c,path:0xe7d8ac,trunk:0x8c7550,leaf:0x7b9e60,darkLeaf:0x557851,lightLeaf:0xa6ba72,pink:0xdab1b0,cream:0xfff5dc,water:0x8ebeb1};
+const COLORS={grass:0xa7bf94,edge:0x8da57a,path:0xdcc9a9,trunk:0x8c7550,leaf:0x7b9e60,darkLeaf:0x557851,lightLeaf:0xa6ba72,pink:0xdab1b0,cream:0xfff5dc,water:0x88afb2};
 const materials=new Map();
 function mat(color, options={}) {
   const key=JSON.stringify([color,options]);
@@ -149,7 +152,7 @@ export class ForestWorld {
     this.playing=false;this.time=0;this.walkTime=0;this.reducedMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
     this.timeOfDay='day';this.nightBlend=0;this.needsRender=false;this.treeKinds={};this.treeSizes=[];this.blossomSites=[];
     this.scene=new THREE.Scene();this.scene.fog=new THREE.Fog(0xe9eddb,120,250);
-    this.sky=new ForestSky();
+    this.sky=new ForestSky();this.weather=new WeatherState();this.surfaces=new ForestSurfaces();
     this.overheadCamera=new THREE.OrthographicCamera(-30,30,25,-25,.1,280);
     this.follow=new FollowCamera();this.camera=this.overheadCamera;this.cameraMode='third-person';this.cameraObstacles=[];
     this.moonCamera=new THREE.PerspectiveCamera(54,1,.08,180);this.moonLook=new THREE.Vector3();this.moonJourney=null;
@@ -207,6 +210,7 @@ export class ForestWorld {
     this.guidance=new THREE.InstancedMesh(new THREE.CircleGeometry(.13,10),new THREE.MeshBasicMaterial({color:0xc49653,transparent:true,opacity:.85,depthWrite:false}),160);
     this.guidance.count=0;this.guidance.frustumCulled=false;this.scene.add(this.guidance);
     this.atmosphere=new ForestAtmosphere(this.scene,this.blossomSites);
+    this.rain=new ForestRain(this.scene,currentScreen().phone);
     this.cameraTarget=new THREE.Vector3();this.viewSize=48;this.resize();
     this.resizeObserver=new ResizeObserver(()=>this.resize());this.resizeObserver.observe(this.container);
     this.setCamera(true);
@@ -223,11 +227,11 @@ export class ForestWorld {
     const soil=cylinder(this.land,0xb1b384,0,-1.13,0,40,38.4,2.6,96);soil.receiveShadow=true;
     cylinder(this.land,COLORS.edge,0,-.15,0,40.18,40,.62,96);
     const geo=new THREE.CircleGeometry(40.2,112);geo.rotateX(-Math.PI/2);
-    const ground=mesh(geo,COLORS.grass,this.land,0,.18,0);ground.castShadow=false;
+    const ground=mesh(geo,COLORS.grass,this.land,0,.18,0);ground.castShadow=false;this.surfaces.apply(ground);
     // A soft outer ground catches the island's shadow and blends into the page.
     const floor=new THREE.Mesh(new THREE.PlaneGeometry(300,300),new THREE.ShadowMaterial({color:0x344837,opacity:.13}));floor.position.y=-2.6;floor.rotation.x=-Math.PI/2;floor.receiveShadow=true;this.scene.add(floor);
     const patches=[[-14,6,5,3,0xb7c68a],[7,10,6,5,0xc1cc90],[6,-12,7,5,0xacc180],[-7,-12,4,5,0xaabd7a],[13,-4,4,6,0xbdcd8a],[-23,19,10,7,0xc3cc8e],[22,-18,9,9,0xadbf7c],[26,6,8,8,0xc3ce93],[-25,-17,8,8,0xaabb80],[-17,0,9,9,0xb7c688],[5,28,10,8,0xc3cd94]];
-    patches.forEach(([x,z,sx,sz,color])=>{const p=mesh(new THREE.CircleGeometry(1,30),color,this.land,x,.187,z,[sx,sz,1]);p.rotation.x=-Math.PI/2;p.castShadow=false;});
+    patches.forEach(([x,z,sx,sz,color])=>{const p=mesh(new THREE.CircleGeometry(1,30),color,this.land,x,.187,z,[sx,sz,1]);p.rotation.x=-Math.PI/2;p.castShadow=false;this.surfaces.apply(p);});
   }
   path(points,width=1.9) {
     const curve=new THREE.CatmullRomCurve3(points.map(([x,z])=>new THREE.Vector3(x,.215,z)));
@@ -238,12 +242,12 @@ export class ForestWorld {
       if(i<160){const k=i*2;indices.push(k,k+1,k+2,k+1,k+3,k+2);}
     }
     const geometry=new THREE.BufferGeometry();geometry.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));geometry.setIndex(indices);geometry.computeVertexNormals();
-    const path=mesh(geometry,COLORS.path,this.land,0,0,0,[1,1,1],{side:THREE.DoubleSide});path.castShadow=false;
+    const path=mesh(geometry,COLORS.path,this.land,0,0,0,[1,1,1],{side:THREE.DoubleSide});path.castShadow=false;this.surfaces.apply(path,'path');
   }
   buildPaths(){TRAILS.forEach(trail=>this.path(trail.points,trail.width));}
   buildPond(config) {
     const pond=new THREE.Group();pond.position.set(config.x,.22,config.z);this.land.add(pond);
-    const bank=mesh(new THREE.CircleGeometry(1,48),0xd9d6ac,pond,0,0,0,[5.4,4.05,1]);bank.rotation.x=-Math.PI/2;bank.castShadow=false;
+    const bank=mesh(new THREE.CircleGeometry(1,48),0xd9d6ac,pond,0,0,0,[5.4,4.05,1]);bank.rotation.x=-Math.PI/2;bank.castShadow=false;this.surfaces.apply(bank,'path');
     const water=mesh(new THREE.CircleGeometry(1,48),COLORS.water,pond,0,.012,0,[4.95,3.6,1],{roughness:.38,metalness:.03});water.rotation.x=-Math.PI/2;water.castShadow=false;
     this.water=water;
     for(let i=0;i<13;i++){
@@ -510,20 +514,31 @@ export class ForestWorld {
     if(immediate||this.reducedMotion)this.nightBlend=this.timeOfDay==='night'?1:0;
     this.needsRender=true;
   }
+  setWeather(mode,immediate=false){
+    this.weather.set(mode,immediate||this.reducedMotion);this.needsRender=true;
+  }
   updateLighting(dt){
     const target=this.timeOfDay==='night'?1:0;
     if(this.moonJourney?.phase==='climbing')this.nightBlend=this.moonJourney.nightBlend;
     else{this.nightBlend=THREE.MathUtils.lerp(this.nightBlend,target,1-Math.exp(-3*dt));if(Math.abs(this.nightBlend-target)<.002)this.nightBlend=target;}
-    const n=this.nightBlend;
+    this.weather.update(dt);
+    const n=this.nightBlend,rain=this.weather.blend;
     this.ambient.color.setHex(0xfff9e4).lerp(new THREE.Color(0x819ac7),n);this.ambient.groundColor.setHex(0x7c9672).lerp(new THREE.Color(0x34466b),n);this.ambient.intensity=1.9-n*1.05;
     this.sunLight.color.setHex(0xfff1d4).lerp(new THREE.Color(0x9fbbe9),n);this.sunLight.intensity=2.4-n*1.94;
     this.fillLight.color.setHex(0xf0f6d8).lerp(new THREE.Color(0x8b92c8),n);this.fillLight.intensity=.6-n*.27;
     this.scene.fog.color.setHex(0xe9eddb).lerp(new THREE.Color(0x1c2d49),n);
-    this.roadLighting.update(n,this.state.position);
+    // Overcast light stays soft and readable, including on white Bubu.
+    this.ambient.color.lerp(new THREE.Color(0xd2dfe4).lerp(new THREE.Color(0x8294b7),n),rain*.8);
+    this.ambient.intensity*=1-rain*.08;
+    this.sunLight.color.lerp(new THREE.Color(0xc7d8e5),rain*.6);this.sunLight.intensity*=1-rain*.66;
+    this.fillLight.intensity+=rain*.15;
+    this.scene.fog.color.lerp(new THREE.Color(0xb5c8cf).lerp(new THREE.Color(0x263a50),n),rain*.72);
+    this.surfaces.update(rain);
+    this.roadLighting.update(Math.max(n,rain*.4),this.state.position);
     const windows=mat(0xf1db9c);windows.emissive.setHex(0xffb969);windows.emissiveIntensity=n*.85;
     this.candleFlame.material.emissive.setHex(0xffb34e);this.candleFlame.material.emissiveIntensity=.3+n;
     this.guidance.material.color.setHex(0xc49653).lerp(new THREE.Color(0xffda92),n);
-    this.butterflies.forEach(b=>b.group.visible=n<.7);
+    this.butterflies.forEach(b=>b.group.visible=n<.7&&rain<.55);
   }
   batchStaticGeometry(){
     // Render the stationary forest in material batches instead of hundreds of draws.
@@ -638,7 +653,7 @@ export class ForestWorld {
       const ease=immediate||this.camera!==this.moonCamera||this.reducedMotion?1:1-Math.exp(-3*dt);
       this.moonCamera.position.lerp(position,ease);this.moonLook.lerp(target,ease);this.moonCamera.aspect=aspect;this.moonCamera.updateProjectionMatrix();this.moonCamera.lookAt(this.moonLook);this.moonCamera.updateMatrixWorld();this.camera=this.moonCamera;
       this.viewSize=this.moonCamera.position.distanceTo(this.moonLook)*2*Math.tan(THREE.MathUtils.degToRad(this.moonCamera.fov/2));
-      this.scene.fog.near=32;this.scene.fog.far=110;return;
+      this.scene.fog.near=32-this.weather.blend*9;this.scene.fog.far=110-this.weather.blend*28;return;
     }
     if(this.thirdPerson){
       const position=this.story==='arrival'?{x:BUBU.x-.5,z:BUBU.z-1}:this.story==='party'?{x:BUBU.x-.8,z:BUBU.z}:this.state.position;
@@ -646,7 +661,7 @@ export class ForestWorld {
       if(this.story==='party'||this.story==='arrival')this.follow.yaw=.35;
       this.camera=this.follow.update(position,this.cameraObstacles,dt,immediate||changed,this.mobile);
       this.follow.yaw=oldYaw;this.viewSize=this.follow.arm*2*Math.tan(THREE.MathUtils.degToRad(this.camera.fov/2));
-      this.scene.fog.near=32;this.scene.fog.far=110;return;
+      this.scene.fog.near=32-this.weather.blend*9;this.scene.fog.far=110-this.weather.blend*28;return;
     }
     if(this.camera!==this.overheadCamera)immediate=true;
     this.camera=this.overheadCamera;this.scene.fog.near=120;this.scene.fog.far=250;
@@ -666,7 +681,7 @@ export class ForestWorld {
   }
   update(dt, moving=false, running=false, paused=false){
     this.time+=dt;const t=this.time;
-    updateVegetation(t,this.reducedMotion);
+    updateVegetation(t,this.reducedMotion,this.weather.blend);
     this.dudu.position.x=this.state.position.x;this.dudu.position.z=this.state.position.z;
     // Keep Dudu's feet on the bridge when crossing the pond.
     this.dudu.position.y=PONDS.some(p=>Math.abs(this.state.position.z-p.z)<1&&Math.abs(this.state.position.x-p.x)<5.6)?.48:.2;
@@ -675,7 +690,7 @@ export class ForestWorld {
     this.animals.forEach(animal=>updateAnimal(animal,dt,t,this.playing?this.state.position:{x:99,z:99},(x,z)=>isWalkable(x,z,this.obstacles),this.nightBlend,this.reducedMotion));
     if(!this.reducedMotion){
       this.gifts.forEach(({group,ring,sparkle},id)=>{const phase=GIFTS.findIndex(g=>g.id===id);group.position.y=.4+Math.sin(t*2+phase)*.1;sparkle.position.y=1.92+Math.sin(t*2.5+phase)*.18;sparkle.rotation.y=t;ring.material.opacity=.5+Math.sin(t*2)*.12;});
-      this.butterflies.forEach(({group,left,right,x,z,phase})=>{group.position.set(x+Math.sin(t*.5+phase)*.95,1.2+Math.sin(t*1.3+phase)*.2,z+Math.cos(t*.4+phase)*.8);group.rotation.y=t*.2+phase;left.rotation.z=Math.sin(t*17+phase)*.85;right.rotation.z=-left.rotation.z;});
+      this.butterflies.forEach(({group,left,right,x,z,phase})=>{group.position.set(x+Math.sin(t*.5+phase)*.95,1.2+Math.sin(t*1.3+phase)*.2,z+Math.cos(t*.4+phase)*.8);group.rotation.y=Math.atan2(.475*Math.cos(t*.5+phase),-.32*Math.sin(t*.4+phase));group.rotation.z=Math.sin(t*.7+phase)*.12;left.rotation.z=Math.sin(t*17+phase)*.85;right.rotation.z=-left.rotation.z;});
       this.ducks.forEach((duck,i)=>{duck.position.x=-1.2+Math.sin(t*.22+i)*.6;duck.rotation.y=Math.sin(t*.2+i)*.4;});
       this.floaties.forEach((r,i)=>{r.scale.x=1+Math.sin(t+i)*.07;});this.dust.rotation.y=t*.008;
       this.balloons.forEach(({group,phase})=>{group.rotation.z=Math.sin(t*.8+phase)*.045;group.rotation.x=Math.cos(t*.6+phase)*.025;});
@@ -690,8 +705,9 @@ export class ForestWorld {
     else if(this.story==='moon')this.updateMoonJourney(0);
     this.updateLighting(paused?0:dt);
     [this.dudu,this.bubu].forEach(bear=>animateBearFace(bear,t,this.story==='party'&&this.storyTime>3.4,this.reducedMotion));
-    this.atmosphere.update(paused?0:dt,this.time,this.playing?this.state.position:{x:0,z:0},this.reducedMotion,this.nightBlend);
-    this.sky.update(paused?0:dt,t,this.nightBlend,this.reducedMotion,this.story==='moon'?this.moonJourney.progress:0);
+    this.atmosphere.update(paused?0:dt,this.time,this.playing?this.state.position:{x:0,z:0},this.reducedMotion,this.nightBlend,this.weather.blend);
+    this.rain.update(this.weather,this.playing?this.state.position:{x:0,z:0},this.nightBlend,this.reducedMotion);
+    this.sky.update(paused?0:dt,t,this.nightBlend,this.reducedMotion,this.story==='moon'?this.moonJourney.progress:0,this.weather.blend);
     if(this.guidance.count&&!this.reducedMotion)this.guidance.material.opacity=.65+Math.sin(t*2)*.2;
     this.setCamera(false,dt);this.renderer.clear();this.sky.render(this.renderer);this.renderer.clearDepth();this.renderer.render(this.scene,this.camera);
   }

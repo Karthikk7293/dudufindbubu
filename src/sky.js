@@ -4,7 +4,7 @@ export class ForestSky {
   constructor(){
     this.scene=new THREE.Scene();this.camera=new THREE.OrthographicCamera(-1,1,1,-1,.1,30);this.camera.position.z=10;
     this.time=0;this.nightTime=0;this.night=false;this.aspect=1;this.clouds=[];
-    const gradient=new THREE.ShaderMaterial({depthWrite:false,depthTest:false,uniforms:{night:{value:0}},vertexShader:'varying vec2 vUv; void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',fragmentShader:'varying vec2 vUv; uniform float night; void main(){vec3 day=mix(vec3(.86,.90,.82),vec3(.96,.95,.87),vUv.y);vec3 dark=mix(vec3(.12,.20,.31),vec3(.025,.05,.12),vUv.y);gl_FragColor=vec4(mix(day,dark,night),1.);}',toneMapped:false});
+    const gradient=new THREE.ShaderMaterial({depthWrite:false,depthTest:false,uniforms:{night:{value:0},rain:{value:0}},vertexShader:'varying vec2 vUv; void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',fragmentShader:'varying vec2 vUv; uniform float night; uniform float rain; void main(){vec3 day=mix(vec3(.86,.90,.82),vec3(.96,.95,.87),vUv.y);vec3 dark=mix(vec3(.12,.20,.31),vec3(.025,.05,.12),vUv.y);vec3 clear=mix(day,dark,night);vec3 overcast=mix(vec3(.70,.78,.82),vec3(.48,.59,.67),vUv.y);overcast=mix(overcast,vec3(.075,.12,.19),night);gl_FragColor=vec4(mix(clear,overcast,rain),1.);}',toneMapped:false});
     this.background=new THREE.Mesh(new THREE.PlaneGeometry(2,2),gradient);this.background.position.z=-10;this.background.renderOrder=-100;this.scene.add(this.background);
     const glowCanvas=document.createElement('canvas');glowCanvas.width=128;glowCanvas.height=128;const ctx=glowCanvas.getContext('2d'),glow=ctx.createRadialGradient(64,64,0,64,64,64);
     glow.addColorStop(0,'#fff6db66');glow.addColorStop(.3,'#ffedc52b');glow.addColorStop(1,'#ffedc500');ctx.fillStyle=glow;ctx.fillRect(0,0,128,128);const texture=new THREE.CanvasTexture(glowCanvas);
@@ -31,13 +31,13 @@ export class ForestSky {
   }
   setNight(night){if(night!==this.night)this.nightTime=0;this.night=night;}
   resize(width,height){this.aspect=width/height;this.camera.left=-this.aspect;this.camera.right=this.aspect;this.camera.updateProjectionMatrix();this.background.scale.x=this.aspect;this.stars.scale.x=this.aspect;this.sun.position.x=this.moon.position.x=-this.aspect*.28;}
-  update(dt,time,blend,reducedMotion,lookout=0){
+  update(dt,time,blend,reducedMotion,lookout=0,rain=0){
     this.time=reducedMotion?0:time;if(this.night)this.nightTime+=dt;
-    this.background.material.uniforms.night.value=blend;this.stars.material.uniforms.time.value=this.time;this.stars.material.uniforms.opacity.value=blend;
-    this.sun.visible=blend<.95;this.moon.visible=blend>.05;
+    this.background.material.uniforms.night.value=blend;this.background.material.uniforms.rain.value=rain;this.stars.material.uniforms.time.value=this.time;this.stars.material.uniforms.opacity.value=blend*(1-rain*.65);
+    this.sun.visible=blend<.95&&rain<.95;this.moon.visible=blend>.05;
     this.moon.scale.setScalar(1+lookout*.75);this.moon.position.y=.77-lookout*.03;
-    this.sun.children.forEach(n=>n.material.opacity=(n.isSprite?1:1)*(1-blend));this.moon.children.forEach((n,i)=>n.material.opacity=blend*(i>1?.2:1));
-    this.cloudMaterial.color.setHex(0xfff9e9).lerp(new THREE.Color(0x17273e),blend);
+    this.sun.children.forEach(n=>n.material.opacity=(1-blend)*(1-rain));this.moon.children.forEach((n,i)=>n.material.opacity=blend*(i>1?.2:1)*(1-rain*.4));
+    this.cloudMaterial.color.setHex(0xfff9e9).lerp(new THREE.Color(0x17273e),blend).lerp(new THREE.Color(0xa0b4be).lerp(new THREE.Color(0x35465b),blend),rain*.75);
     for(const cloud of this.clouds){const span=this.aspect+ .6;cloud.group.position.x=((cloud.x+this.time*cloud.speed+span)%(span*2)+span*2)%(span*2)-span;}
     const phase=this.nightTime%13,active=this.night&&blend>.8&&!reducedMotion&&phase>2.4&&phase<3.75;
     this.meteor.visible=active;

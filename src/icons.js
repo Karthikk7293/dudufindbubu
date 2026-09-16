@@ -3,6 +3,8 @@ export const icons = {
   camera: svg('<rect x="3" y="6" width="18" height="14" rx="3"/><path d="m8 6 1-3h6l1 3"/><circle cx="12" cy="13" r="4"/>'),
   recenter: svg('<path d="M4 9a8 8 0 1 1 0 7M4 4v5h5"/><circle cx="12" cy="12" r="2"/>'),
   sun: svg('<circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5"/>'),
+  cloudSun: svg('<path d="M6 3v2M2 8h2m.2-4.8 1.4 1.4M11 3l-1 2"/><path d="M8 12a4 4 0 1 1 4-5"/><path d="M8 20a4 4 0 1 1 .5-8A5 5 0 0 1 18 13a3.5 3.5 0 1 1 0 7H8Z"/>'),
+  rain: svg('<path d="M6 14a4 4 0 1 1 .5-8A5.5 5.5 0 0 1 17 7a3.5 3.5 0 1 1 1 7H6Z"/><path d="m7 17-1 3m6-3-1 3m6-3-1 3"/>'),
   moon: svg('<path d="M20.5 14A8.8 8.8 0 0 1 10 3.5 9 9 0 1 0 20.5 14Z"/><path d="M18 3v4m-2-2h4"/>'),
   sound: svg('<path d="m11 5-6 4H2v6h3l6 4z"/><path d="M15 8a6 6 0 0 1 0 8m3-11a10 10 0 0 1 0 14"/>'),
   muted: svg('<path d="m11 5-6 4H2v6h3l6 4z"/><path d="m16 9 6 6m0-6-6 6"/>'),
