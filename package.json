@@ -16,7 +16,9 @@
     "test:engine": "node tests/engine.browser.mjs",
     "test:engine:inputs": "node tests/engine.inputs.mjs",
     "test:story": "node tests/forest-story.mjs",
-    "test:deployment": "node tests/deployment.browser.mjs"
+    "test:deployment": "node tests/deployment.browser.mjs",
+    "model:dudu": "blender --background --python scripts/build-dudu.py",
+    "test:character": "node tests/blender-character.browser.mjs"
   },
   "dependencies": {
     "@mediapipe/tasks-vision": "1.0.1",

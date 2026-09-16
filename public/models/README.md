@@ -1,5 +1,7 @@
 # Hand landmark model
 
+The separate `characters/dudu.glb` is our original Blender-built Dudu prototype. It loads only in `/character.html` or the forest's `?dudu=blender` preview. Editable source and workflow: [art/characters](../../art/characters/README.md).
+
 `hand_landmarker.task` is Google's MediaPipe Hand Landmarker, float16, version 1.
 
 Source: https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task

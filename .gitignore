@@ -3,3 +3,5 @@ dist/
 test-results/
 .DS_Store
 .vercel/
+*.blend1
+*.blend2

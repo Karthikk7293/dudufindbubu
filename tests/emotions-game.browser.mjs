@@ -8,6 +8,7 @@ async function scene(fixture,phone=false){
   const page=await context.newPage();page.setDefaultTimeout(120000);page.on('pageerror',e=>errors.push(e.message));
   await page.addInitScript(state=>{window.__DUDU_TEST_STATE__=state;localStorage.setItem('dudu-sound','off');localStorage.setItem('dudu-time-of-day','day');localStorage.setItem('dudu-weather','clear');Object.defineProperty(document,'fullscreenEnabled',{get:()=>false});},fixture);
   await page.goto(base,{waitUntil:'domcontentloaded'});await page.waitForFunction(()=>window.__dudu?.snapshot().ready);await page.waitForSelector('#loading',{state:'hidden'});
+  if(new URL(base).searchParams.get('dudu')==='blender')assert.equal(await page.evaluate(()=>window.__dudu.snapshot().characterModel?.source),'blender');
   await page.locator('#start-button').click();return {context,page,snap:()=>page.evaluate(()=>window.__dudu.snapshot())};
 }
 try{
@@ -27,6 +28,7 @@ try{
     await client.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
     await page.waitForFunction(()=>window.__dudu.snapshot().expressions[0].stride<.05);
     assert.equal((await snap()).bubuVisible,false);
+    if(new URL(base).searchParams.get('dudu')==='blender')await page.screenshot({path:'test-results/blender-dudu-forest-mobile.png'});
     console.log('Mobile gift curiosity, delight, paused emotions, and touch walking passed.');await context.close();
   }
   {
@@ -38,6 +40,10 @@ try{
     await page.waitForTimeout(150);assert.deepEqual((await snap()).expressions,frozen);
     await page.locator('#pause-dialog [data-close]').last().click();
     await page.waitForFunction(()=>window.__dudu.snapshot().partyTime>3.6);const party=await snap();assert.equal(party.candleLit,false);assert.equal(party.expressions[1].mood,'delighted');
+    if(new URL(base).searchParams.get('dudu')==='blender'){
+      assert.ok(party.characterModel.weights.Happy>.3);
+      await page.screenshot({path:'test-results/blender-dudu-birthday.png'});
+    }
     await page.waitForSelector('#ending-dialog[open]');await page.getByRole('button',{name:'Walk together'}).click();
     assert.equal((await snap()).following,true);
     await page.locator('#interact-button').click();await page.waitForFunction(()=>window.__dudu.snapshot().expressions[1].mood==='shy');

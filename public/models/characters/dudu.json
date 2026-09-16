@@ -1,0 +1,17 @@
+{
+  "blender": "5.2.2 LTS",
+  "bones": 11,
+  "triangles": 28688,
+  "materials": 10,
+  "expressions": [
+    "Happy",
+    "Shy",
+    "Surprised",
+    "Blink"
+  ],
+  "animations": [
+    "Idle",
+    "Walk"
+  ],
+  "bytes": 1249240
+}

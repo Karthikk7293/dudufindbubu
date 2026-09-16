@@ -24,5 +24,5 @@ const trackingAssets = () => ({
 });
 export default defineConfig({
   plugins: [trackingAssets()],
-  build: { rollupOptions: { input: { forest: fileURLToPath(new URL('./index.html', import.meta.url)), engine: fileURLToPath(new URL('./engine.html', import.meta.url)) }, output: { manualChunks: { three: ['three'] } } } },
+  build: { rollupOptions: { input: { forest: fileURLToPath(new URL('./index.html', import.meta.url)), engine: fileURLToPath(new URL('./engine.html', import.meta.url)), character: fileURLToPath(new URL('./character.html', import.meta.url)) }, output: { manualChunks: { three: ['three'] } } } },
 });

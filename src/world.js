@@ -131,7 +131,10 @@ export function createBear(white=false) {
   root.userData={body,head,arms,forearms,legs,eyes,happyEyes,ears,cheeks,brows,mouth,openMouth,tongue,pack,expression:new BearExpression(),blinkOffset:white?2.2:0};return root;
 }
 
-export function animateBearFace(bear,time,happy=false,reducedMotion=false){applyBearFace(bear,time,happy,reducedMotion);}
+export function animateBearFace(bear,time,happy=false,reducedMotion=false){
+  if(bear.userData.blenderDudu)bear.userData.blenderDudu.update(time,reducedMotion);
+  else applyBearFace(bear,time,happy,reducedMotion);
+}
 
 function createGift(color) {
   const group=new THREE.Group();
@@ -194,7 +197,17 @@ export class ForestWorld {
       for(let r=.25;r<=3&&!free;r+=.25)for(let i=0;i<16;i++){const a=i/16*Math.PI*2,x=origin.x+Math.cos(a)*r,z=origin.z+Math.sin(a)*r;if(isWalkable(x,z,this.obstacles)){free={x,z};break;}}
       state.position=free||{...START};
     }
-    this.dudu=createBear();this.dudu.position.set(state.position.x,0,state.position.z);this.dudu.rotation.y=.6;this.scene.add(this.dudu);
+    this.dudu=createBear();
+    // The first Blender character is available for review without changing the
+    // established default cast. Only this preview downloads the extra asset.
+    if(new URLSearchParams(window.location.search).get('dudu')==='blender'){
+      await progress(76,'Getting Dudu’s new look ready…');
+      try{
+        const {loadDuduModel,attachDuduModel}=await import('./blender-dudu.js');
+        attachDuduModel(this.dudu,await loadDuduModel());
+      }catch(error){this.characterLoadError='Dudu’s new look could not load. His usual look is ready to play.';console.warn(this.characterLoadError,error);}
+    }
+    this.dudu.position.set(state.position.x,0,state.position.z);this.dudu.rotation.y=.6;this.scene.add(this.dudu);
     this.bubu=createBear(true);this.bubu.position.set(BUBU.x,.25,BUBU.z);this.bubu.rotation.y=.35;this.scene.add(this.bubu);
     this.bubu.visible=state.bubuArrived;this.dudu.visible=state.departed;
     this.companion=null;
