@@ -1,6 +1,9 @@
 import * as THREE from 'three';
 import { ForestWorld } from './world.js';
 import { ForestAudio } from './audio.js';
+import { freshAdventure, discoverPlaces, befriend, FRIENDS, placeDestination } from './adventure.js';
+import { AdventureJournal } from './adventure-ui.js';
+import { PostcardCamera } from './postcard.js';
 import { turnBear } from './bear-motion.js';
 import { currentScreen } from './screen-support.js';
 import { icons, giftArt } from './icons.js';
@@ -10,7 +13,8 @@ import { GIFTS, BUBU, START, DUDU_NEST, BUBU_NEST, DESTINATION, MOON_NEST, WORLD
 const $=id=>document.getElementById(id);
 const show=id=>$(id).classList.remove('hidden'), hide=id=>$(id).classList.add('hidden');
 const audio=new ForestAudio();
-let state=freshState();
+let state=freshState(),adventure=freshAdventure(),photo;
+let exploreTarget=null,discoveryQueue=[],discoveryRemaining=0,photoSession=0;
 // Adventure progress belongs to this page visit. Refresh always starts at home.
 try{localStorage.removeItem(SAVE_KEY);}catch{/* Storage is optional. */}
 // Explicit browser-test fixtures are only accepted in a development build.
@@ -22,8 +26,10 @@ let guidedId=null,inspectedGift=null,guideTarget=null,guidePath=[],guideTime=0,g
 let joystick={x:0,y:0}, joystickPointer=null;
 const keys=new Set();
 const dialogs=[...document.querySelectorAll('dialog')];
-const isPaused=()=>dialogs.some(d=>d.open)||document.hidden||document.documentElement.dataset.rotateRequired==='true';
+const isPaused=()=>!!photo?.active||dialogs.some(d=>d.open)||document.hidden||document.documentElement.dataset.rotateRequired==='true';
 
+const journal=new AdventureJournal(followPlace);
+$('journey-icon').innerHTML=icons.book;
 $('sound-button').innerHTML=icons.muted;$('help-button').innerHTML=icons.help;$('headphone-icon').innerHTML=icons.headphones;
 $('leaf-icon').innerHTML=icons.leaf;$('heart-icon').innerHTML=icons.heart;$('map-icon').innerHTML=icons.map;
 $('play-bag-icon').innerHTML=icons.bag;$('play-map').innerHTML=icons.map;$('play-pause').innerHTML=icons.pause;
@@ -84,9 +90,18 @@ dialogs.forEach(dialog=>{
   dialog.addEventListener('click',event=>{if(event.target===dialog && dialog.id!=='ending-dialog'){const r=dialog.getBoundingClientRect();if(event.clientX<r.left||event.clientX>r.right||event.clientY<r.top||event.clientY>r.bottom)closeDialog(dialog);}});
 });
 $('help-button').addEventListener('click',()=>openDialog('help-dialog'));
-function openMap(){drawMap($('large-map'),true);openDialog('map-dialog');}
+function openMap(){$('map-journal').hidden=!playing;drawMap($('large-map'),true);openDialog('map-dialog');}
 $('map-button').addEventListener('click',openMap);$('play-map').addEventListener('click',openMap);
-$('play-bag').addEventListener('click',()=>openDialog('bag-dialog'));$('play-pause').addEventListener('click',()=>openDialog('pause-dialog'));
+$('play-bag').addEventListener('click',()=>openJournal('gifts'));$('play-pause').addEventListener('click',()=>openDialog('pause-dialog'));
+$('journey-status').addEventListener('click',()=>openJournal());
+$('pause-journal').addEventListener('click',()=>openJournal());
+$('map-journal').addEventListener('click',()=>openJournal('places'));
+$('pause-photo').addEventListener('click',openPhoto);$('journal-photo').addEventListener('click',openPhoto);
+$('photo-exit').addEventListener('click',closePhoto);
+$('photo-reset').addEventListener('click',()=>photo.reset());$('photo-portrait').addEventListener('click',()=>photo.portrait());
+$('photo-save').addEventListener('click',savePostcard);
+$('stop-walking').addEventListener('click',stopWalking);
+$('return-birthday').addEventListener('click',()=>{stopWalking();exploreTarget=null;guideOrigin=null;updateGuidance(0);});
 $('pause-sound').addEventListener('click',toggleSound);$('pause-help').addEventListener('click',()=>openDialog('help-dialog'));
 async function enterFullscreen(){
   fullscreenTransition=true;
@@ -114,7 +129,7 @@ function updateScreen(){
     else $('world').focus({preventScroll:true});
     audio.setPaused(isPaused());
   }
-  if(world&&ready){world.resize();world.needsRender=true;}
+  if(world&&ready){world.resize();world.needsRender=true;photo?.resize();}
 }
 let suspendedDialog=null;
 window.addEventListener('resize',updateScreen);
@@ -129,6 +144,8 @@ function updateZoomUI(){
   const label=world.overview?'Whole forest':follow?'Third person':'Overhead view';
   if($('camera-mode').dataset.view!==label){$('camera-mode').innerHTML=`${icons.camera}<span>${label}</span>`;$('camera-mode').dataset.view=label;}
   $('camera-recenter').disabled=world.cinematic;
+  ['pause-photo','journal-photo'].forEach(id=>{$(id).disabled=!photo?.available;$(id).title=photo?.available?'Make a postcard (X)':'Available after this little scene';});
+  if($('bag-dialog').open)document.querySelectorAll('[data-place]').forEach(button=>button.disabled=world.cinematic||(button.dataset.place==='moonwatch'&&!state.completed));
 }
 function zoom(factor){if(!world||world.cinematic)return;world.zoomBy(factor);updateZoomUI();}
 function overview(){if(!world||world.cinematic)return;world.toggleOverview();updateZoomUI();}
@@ -141,7 +158,7 @@ function inspectGift(gift){
   $('track-gift').classList.toggle('hidden',found);$('track-gift').textContent=`Follow ${gift.short.toLowerCase()}’s trail ↗`;
 }
 document.querySelectorAll('.bag-slot').forEach(slot=>slot.addEventListener('click',()=>inspectGift(GIFTS.find(g=>g.id===slot.dataset.gift))));
-$('track-gift').addEventListener('click',()=>{guidedId=inspectedGift;guideOrigin=null;closeDialog($('bag-dialog'));updateGuidance(0);toast(`Follow the glowing trail to ${guideTarget.short.toLowerCase()}. Tap its pointer to walk there.`,5000);});
+$('track-gift').addEventListener('click',()=>{exploreTarget=null;guidedId=inspectedGift;guideOrigin=null;closeDialog($('bag-dialog'));updateGuidance(0);toast(`Follow the glowing trail to ${guideTarget.short.toLowerCase()}. Tap its pointer to walk there.`,5000);});
 $('hint-button').addEventListener('click',()=>{
   if(state.completed){$('bag-hint').textContent='One more little adventure: follow the moon pointer to the tall Moonwatch tree, then climb to the nest together. ♡';return;}
   const next=GIFTS.filter(g=>!state.collected.includes(g.id)).sort((a,b)=>Math.hypot(state.position.x-a.x,state.position.z-a.z)-Math.hypot(state.position.x-b.x,state.position.z-b.z))[0];
@@ -150,20 +167,23 @@ $('hint-button').addEventListener('click',()=>{
 
 function updateGuidance(dt){
   const visible=playing&&!world.cinematic&&!isPaused();
+  $('journey-status').classList.toggle('hidden',!visible);
+  $('walk-status').classList.toggle('hidden',!visible||(!route.length&&!exploreTarget));
+  $('stop-walking').hidden=!route.length;$('return-birthday').hidden=!exploreTarget;
   ['guide-button','gift-pointer'].forEach(id=>$(id).classList.toggle('hidden',!visible));world.guidance.visible=visible;
   if(!visible)return;
-  const next=guidanceTarget(state,guidedId);guideTime-=dt;
-  const changed=next.id!==guideTarget?.id||next.x!==guideTarget?.x||next.z!==guideTarget?.z;guideTarget=next;guidedId=next.id;
+  const next=exploreTarget||guidanceTarget(state,guidedId);guideTime-=dt;
+  const changed=next.id!==guideTarget?.id||next.x!==guideTarget?.x||next.z!==guideTarget?.z;guideTarget=next;if(!next.place)guidedId=next.id;
   if(changed||!guideOrigin||(guideTime<=0&&Math.hypot(state.position.x-guideOrigin.x,state.position.z-guideOrigin.z)>1.5)){
     guidePath=findPath(state.position,guideTarget,world.obstacles);world.showGuidance(guidePath);guideTime=.6;guideOrigin={...state.position};
-    $('guide-name').textContent=guideTarget.short;$('guide-art').innerHTML=giftArt[guideTarget.id]||(guideTarget.id==='moon-nest'?icons.moon:icons.heart);
+    $('guide-name').textContent=guideTarget.short;$('guide-art').innerHTML=giftArt[guideTarget.id]||icons[guideTarget.icon]||(guideTarget.id==='moon-nest'?icons.moon:icons.heart);
     document.querySelectorAll('.bag-slot').forEach(slot=>slot.classList.toggle('tracked',slot.dataset.gift===guidedId));
   }
   const distance=Math.hypot(state.position.x-next.x,state.position.z-next.z),near=distance<(next.id==='bubu'?3.2:next.id==='moon-nest'?2.6:2.5);
-  const action=next.id==='moon-nest'?'Climb together':next.id==='bubu'?'Celebrate':'Collect';
-  $('guide-detail').textContent=near?`${action} ♡`:`${Math.ceil(distance)} m · Tap to follow`;
-  $('guide-button').setAttribute('aria-label',`${near?action:'Follow the trail to'} ${next.short}`);
-  $('gift-pointer').setAttribute('aria-label',`${near?action:'Walk to'} ${next.short}`);
+  const action=next.id==='moon-nest'||next.id==='moonwatch'?'Climb together':next.place?'Explore':next.id==='bubu'?(state.completed?'Say hello':'Celebrate'):'Collect';
+  $('guide-detail').textContent=route.length?'Walking · Tap to stop':near?`${action} ♡`:`${Math.ceil(distance)} m · Tap to follow`;
+  $('guide-button').setAttribute('aria-label',route.length?'Stop walking':`${near?action:'Follow the trail to'} ${next.short}`);
+  $('gift-pointer').setAttribute('aria-label',route.length?'Stop walking':`${near?action:'Walk to'} ${next.short}`);
   const p=world.projectLocation(next.x,2.7,next.z),{x,y}=p;
   const compact=currentScreen().compact;
   const px=Math.max(95,Math.min(world.width-95,x)),py=Math.max(compact?125:150,Math.min(world.height-(compact?120:world.mobile?220:130),y));
@@ -173,11 +193,65 @@ function updateGuidance(dt){
   arrow.style.transform=offscreen?`rotate(${Math.atan2(y-py,x-px)*180/Math.PI-90}deg)`:'';
   const d=world.screenPosition(world.dudu,2.7);$('guide-arrow').style.transform=`rotate(${Math.atan2(y-d.y,x-d.x)*180/Math.PI+90}deg)`;
 }
+function stopWalking(){route=[];keys.clear();resetJoystick();if(world)world.clickMarker.visible=false;}
+function setWalkRoute(target){
+  stopWalking();route=findPath(state.position,target,world.obstacles);
+  if(route.length)world.mark(target);else toast('That spot is behind the scenery. Try a nearby path.');
+  $('world').focus({preventScroll:true});
+}
 function followGuidance(){
   if(!guideTarget||world.cinematic||isPaused())return;
+  if(route.length){stopWalking();return;}
   const distance=Math.hypot(state.position.x-guideTarget.x,state.position.z-guideTarget.z);
-  if(distance<(guideTarget.id==='bubu'?3.2:guideTarget.id==='moon-nest'?2.6:2.5)){interact();return;}
-  route=findPath(state.position,guideTarget,world.obstacles);world.mark(guideTarget);$('world').focus({preventScroll:true});
+  if(distance<(guideTarget.id==='bubu'?3.2:guideTarget.id==='moon-nest'||guideTarget.id==='moonwatch'?2.6:2.5)){
+    if(guideTarget.place&&guideTarget.id!=='moonwatch'){openJournal('places');return;}
+    interact();return;
+  }
+  setWalkRoute(guideTarget);
+}
+function openJournal(tab){if(tab)journal.select(tab);journal.render(state,adventure);openDialog('bag-dialog');}
+function followPlace(place){
+  if(!place||!playing||world.cinematic||(place.afterBirthday&&!state.completed))return;
+  exploreTarget=placeDestination(place);guideOrigin=null;closeDialog($('bag-dialog'));updateGuidance(0);setWalkRoute(exploreTarget);
+}
+function updateDiscoveries(dt){
+  const discoveries=discoverPlaces(adventure,state,world.dudu.position);
+  if(discoveries.length){discoveryQueue.push(...discoveries);journal.render(state,adventure);}
+  if(exploreTarget&&exploreTarget.id!=='moonwatch'&&Math.hypot(state.position.x-exploreTarget.x,state.position.z-exploreTarget.z)<1){
+    stopWalking();exploreTarget=null;guideOrigin=null;
+  }
+  discoveryRemaining=Math.max(0,discoveryRemaining-dt);
+  if(discoveryRemaining===0&&discoveryQueue.length){
+    const place=discoveryQueue.shift();$('discovery-name').textContent=place.name;$('discovery-icon').innerHTML=icons[place.icon]||icons.leaf;
+    discoveryRemaining=4.5;audio.chirp();
+  }
+}
+function openPhoto(){
+  if(!playing||!photo?.available)return;
+  clearInputs();dialogs.filter(d=>d.open).forEach(d=>d.close());
+  // Finish a stationary frame once, then the photo camera owns rendering.
+  world.update(0,false,false,true);world.guidance.visible=false;world.clickMarker.visible=false;
+  if(!photo.open())return;
+  photoSession++;$('photo-save').disabled=false;$('photo-status').textContent='';
+  $('app').classList.add('photo-mode');show('photo-ui');audio.setPaused(true);wasPaused=true;
+  $('photo-exit').focus({preventScroll:true});
+}
+function closePhoto(){
+  if(!photo?.active)return;photoSession++;photo.close();hide('photo-ui');$('app').classList.remove('photo-mode');
+  world.needsRender=true;audio.setPaused(isPaused());$('world').focus({preventScroll:true});
+}
+async function savePostcard(){
+  if(!photo?.active||$('photo-save').disabled)return;
+  const session=photoSession;$('photo-save').disabled=true;$('photo-status').textContent='Making your postcard…';
+  try{
+    const blob=await photo.capture($('photo-message').value);
+    if(session!==photoSession)return;
+    const url=URL.createObjectURL(blob),link=document.createElement('a');
+    link.href=url;link.download=`sunnywood-postcard-${adventure.postcards+1}.png`;document.body.append(link);link.click();link.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),60000);adventure.postcards++;journal.render(state,adventure);
+    $('photo-status').textContent='Postcard ready. Check your downloads. ♡';
+  }catch(error){if(session===photoSession)$('photo-status').textContent=error.message||'Please try making the postcard again.';}
+  finally{if(session===photoSession)$('photo-save').disabled=false;}
 }
 $('guide-button').addEventListener('click',followGuidance);$('gift-pointer').addEventListener('click',followGuidance);
 
@@ -185,6 +259,7 @@ function toast(message,duration=4500){clearTimeout(toastTimer);$('toast').textCo
 function speak(message,bear='dudu'){clearTimeout(speechTimer);speechBear=bear;$('speech').textContent=message;show('speech');speechTimer=setTimeout(()=>hide('speech'),3800);}
 
 function updateUI(){
+  journal.render(state,adventure);
   const count=state.collected.length;
   $('progress-fill').style.width=`${count/GIFTS.length*100}%`;$('progress-text').textContent=`${count} of ${GIFTS.length} gifts collected`;$('collected-count').textContent=count;
   $('play-bag').setAttribute('aria-label',`Open gift bag, ${count} of ${GIFTS.length} gifts`);
@@ -223,18 +298,29 @@ function checkNearby(){
   nearby=GIFTS.find(g=>!state.collected.includes(g.id)&&Math.hypot(state.position.x-g.x,state.position.z-g.z)<2.5);
   if(state.completed&&Math.hypot(state.position.x-MOON_NEST.entry.x,state.position.z-MOON_NEST.entry.z)<2.6)nearby={id:'moon-nest'};
   if(!nearby&&state.bubuArrived&&Math.hypot(state.position.x-world.bubu.position.x,state.position.z-world.bubu.position.z)<3.2)nearby={id:'bubu'};
-  if(nearby){$('interact-label').textContent=nearby.id==='moon-nest'?'Climb to the moon nest together':nearby.id==='bubu'?(state.completed?'Share a little moment':'Celebrate Bubu’s birthday'):`Pick up ${nearby.short.toLowerCase()}`;show('interact-button');}
+  if(!nearby){const animal=world.nearbyFriend();if(animal)nearby={id:'friend',animal};}
+  if(nearby){$('interact-label').textContent=nearby.id==='friend'?`Say hello to the ${nearby.animal.kind}`:nearby.id==='moon-nest'?'Climb to the moon nest together':nearby.id==='bubu'?(state.completed?'Share a little moment':'Celebrate Bubu’s birthday'):`Pick up ${nearby.short.toLowerCase()}`;show('interact-button');}
   else hide('interact-button');
+  $('touch-interact').setAttribute('aria-label',nearby?$('interact-label').textContent:'Interact with a nearby gift or friend');
 }
 function interact(){
   if(!playing||isPaused())return;
   if(world.story==='moon'){if(world.moonJourney.descend()){hide('interact-button');keys.clear();}return;}
   if(world.cinematic)return;
-  checkNearby();if(!nearby){toast('Wander close to a wrapped gift or Bubu, then say hello.',3000);return;}
+  checkNearby();if(!nearby){toast('Wander close to a gift, a forest friend, or Bubu, then say hello.',3000);return;}
   if(nearby.id==='moon-nest'){
     if(world.startMoonVisit()){route=[];keys.clear();resetJoystick();hide('speech');hide('toast');hide('interact-button');}
     else toast('Let’s take a step closer to the ladder together.');
     return;
+  }
+  if(nearby.id==='friend'){
+    const animal=nearby.animal;stopWalking();
+    if(world.greetAnimal(animal)){
+      const first=befriend(adventure,animal.kind);journal.render(state,adventure);audio.chirp();
+      speak('“Hello, little friend.” ♡');
+      toast(first?`${FRIENDS.find(f=>f.kind===animal.kind).name} · A new friend in your journal ♡`:'A familiar face, a little hello. ♡');
+    }
+    checkNearby();return;
   }
   if(nearby.id==='bubu'){
     if(state.completed){route=[];keys.clear();resetJoystick();world.shareMoment();audio.chirp(true);speak(['“Can we stay here a little longer?” ♡','“You’re my favorite adventure, Dudu.”','“Best. Birthday. Ever.”'][Math.floor(Math.random()*3)],'bubu');return;}
@@ -253,6 +339,7 @@ function interact(){
 $('interact-button').addEventListener('click',interact);$('touch-interact').addEventListener('click',interact);
 $('stay-button').addEventListener('click',()=>{closeDialog($('ending-dialog'));toast('Follow the moon pointer to the big Moonwatch tree. There’s a nest under the stars for two. ♡',6500);});
 function restart(){
+  closePhoto();clearInputs();adventure=freshAdventure();exploreTarget=null;discoveryQueue=[];discoveryRemaining=0;hide('discovery-notice');journal.select('gifts');$('photo-message').value='A little journey. A lot of love.';
   hide('moon-caption');$('app').classList.remove('moon-visit');['intro-time','play-time','pause-time'].forEach(id=>$(id).disabled=false);
   dialogs.filter(d=>d.open).forEach(closeDialog);audio.party=false;state=freshState();world.state=state;world.dudu.rotation.y=0;world.bubu.rotation.y=.35;
   world.gifts.forEach(g=>{g.group.visible=true;g.ring.visible=true;g.sparkle.visible=true;});
@@ -264,6 +351,15 @@ $('reload-button').addEventListener('click',()=>location.reload());
 
 window.addEventListener('keydown',event=>{
   const k=event.key.toLowerCase();
+  if(photo?.active){
+    const typing=event.target.closest('input,textarea');
+    if(k==='escape'||(k==='x'&&!typing)){event.preventDefault();closePhoto();return;}
+    if(!typing){
+      if(['arrowleft','arrowright','arrowup','arrowdown'].includes(k)){event.preventDefault();photo.orbit(k==='arrowleft'?.12:k==='arrowright'?-.12:0,k==='arrowup'?-.08:k==='arrowdown'?.08:0);}
+      if(['+','=','-','_'].includes(k)){event.preventDefault();photo.zoom(k==='+'||k==='='?1/1.15:1.15);}
+    }
+    return;
+  }
   if(isPaused())return;
   if(!playing)return;
   if(['arrowup','arrowdown','arrowleft','arrowright',' ','w','a','s','d','j','l','i','k'].includes(k)){event.preventDefault();keys.add(k);route=[];}
@@ -271,7 +367,8 @@ window.addEventListener('keydown',event=>{
   if(event.repeat)return;
   if(k==='e'||k===' '){event.preventDefault();interact();}
   if(k==='m'){event.preventDefault();openMap();}
-  if(k==='b'){event.preventDefault();openDialog('bag-dialog');}
+  if(k==='b'){event.preventDefault();openJournal('gifts');}
+  if(k==='x'){event.preventDefault();openPhoto();}
   if(k==='+'||k==='='){event.preventDefault();zoom(1/1.25);}
   if(k==='-'||k==='_'){event.preventDefault();zoom(1.25);}
   if(k==='0'){event.preventDefault();overview();}
@@ -291,6 +388,7 @@ function walkTo(clientX,clientY){
   const point=world.groundPoint(clientX,clientY);if(!point)return;
   const path=findPath(state.position,point,world.obstacles);
   if(path.length){route=path;world.mark(point);$('world').focus({preventScroll:true});}
+  else toast('That spot is behind the scenery. Try a nearby path.');
 }
 const forestTouches=new Map();let pinchDistance=0,pinched=false,mouseLook=null;
 $('world').addEventListener('contextmenu',event=>event.preventDefault());
@@ -385,23 +483,27 @@ function animate(time){
       const travel=route.length?Math.min(speed*dt,Math.hypot(route[0].x-state.position.x,route[0].z-state.position.z)):speed*dt;
       moveWithCollisions(state.position,dx*travel,dz*travel,world.obstacles);
       moving=Math.hypot(state.position.x-oldX,state.position.z-oldZ)>.001;
-      if(!moving&&route.length)route=[];
+      if(!moving&&route.length){stopWalking();toast('A tree is in the way. Tap the trail to find another route.');}
       turnBear(world.dudu,Math.atan2(dx,dz),dt);
       stepTime+=dt;if(moving&&stepTime>(running?.23:.34)){audio.footstep(running);stepTime=0;}
     }
     checkNearby();
     if(shouldRevealBubu(state)){route=[];keys.clear();hide('interact-button');world.revealBubu();}
   }
-  if(!paused||!wasPaused||world.needsRender){world.update(paused?0:dt,moving,running,paused);world.needsRender=false;}
+  if(!photo?.active&&(!paused||!wasPaused||world.needsRender)){world.update(paused?0:dt,moving,running,paused);world.needsRender=false;}
+  if(photo?.active&&!document.hidden)photo.render();
+  if(playing&&!paused)updateDiscoveries(dt);
+  $('discovery-notice').classList.toggle('hidden',paused||discoveryRemaining===0||(world.cinematic&&world.moonJourney?.phase!=='stargazing'));
   wasPaused=paused;
   for(const event of world.events.splice(0)){
-    if(event==='departed'){audio.chirp();toast('Follow the gift pointer. Tap it to walk there · B to choose a different gift',6500);}
+    if(event==='departed'){updateUI();audio.chirp();toast('Follow the gift pointer. Tap it to walk there · B to choose a different gift',6500);}
     if(event==='arrival-start'){hide('interact-button');speak('“Bubu…? It’s me!”');audio.chirp();}
-    if(event==='arrived'){audio.chirp(true);speak('“All these surprises… for me?” ♡','bubu');}
+    if(event==='arrived'){updateUI();audio.chirp(true);speak('“All these surprises… for me?” ♡','bubu');}
     if(event==='party-start'){hide('toast');show('party-caption');$('party-line').textContent='Happy birthday, Bubu ♡';audio.celebrate();}
     if(event==='party-wish'){$('party-line').textContent='A wish, a smile, and a little magic.';audio.collect();}
     if(event==='party-finished'){audio.party=false;hide('party-caption');keys.clear();joystick={x:0,y:0};route=[];updateUI();openDialog('ending-dialog');}
     if(event==='moon-approaching'){
+      exploreTarget=null;guideOrigin=null;
       $('app').classList.add('moon-visit');show('moon-caption');$('moon-line').textContent='One more little adventure, together.';$('moon-detail').textContent='Dudu and Bubu are heading to the ladder.';
       ['intro-time','play-time','pause-time'].forEach(id=>$(id).disabled=true);
     }
@@ -429,7 +531,7 @@ function animate(time){
 export async function initialize(progress){
   await progress(12,'Unfolding a new birthday adventure…');
   world=new ForestWorld($('world'),state);
-  await world.initialize(progress);
+  await world.initialize(progress);photo=new PostcardCamera(world);
   world.setTimeOfDay(timeOfDay,true);audio.setNight(timeOfDay==='night');
   world.setWeather(weatherMode,true);audio.setRain(weatherMode==='rain');
   // Saves from an older forest layout must not trap a returning player.
@@ -438,5 +540,5 @@ export async function initialize(progress){
   await world.warmUp(progress);
   ready=true;$('start-button').disabled=false;lastTime=performance.now();requestAnimationFrame(animate);
   // Read-only state for browser diagnostics, with ordinary input driving tests.
-  if(import.meta.env.DEV)window.__dudu={snapshot:()=>JSON.parse(JSON.stringify({state,ready,playing,paused:isPaused(),camera:{mode:world.cameraMode,perspective:!!world.camera.isPerspectiveCamera,position:world.camera.position,target:world.story==='moon'?world.moonLook:world.thirdPerson?world.follow.target:world.cameraTarget,yaw:world.movementYaw,pitch:world.follow.pitch,fov:world.camera.fov,distance:world.follow.distance,arm:world.follow.arm,avoidYaw:world.follow.avoidYaw,avoidPitch:world.follow.avoidPitch},nearby:nearby?.id,position:state.position,obstacles:world.obstacles,sound:audio.enabled,route:route.length,render:world.renderer.info.render,quality:world.quality,environment:{tufts:world.meadow.tufts,grassCells:world.meadow.cells.length,grassTime:world.meadow.uniforms.time.value,breeze:world.meadow.uniforms.breeze.value,ferns:world.understory.count,sunbeams:world.sunlight.group.visible,fogNear:world.scene.fog.near,fogFar:world.scene.fog.far},time:world.time,view:world.viewSize,zoom:world.cameraMode==='third-person'?world.follow.distance:world.zoomView,overview:world.overview,story:world.story,bubuVisible:world.bubu.visible,bubuPosition:world.bubu.position,duduPosition:world.dudu.position,animals:world.animals.map(a=>({kind:a.kind,x:a.group.position.x,z:a.group.position.z,action:a.brain.mode,model:a.blenderSheep?'blender':'procedural',clip:a.blenderSheep?.clip,blink:a.blenderSheep?.blink,distance:a.brain.distance})),balloons:world.balloons.length,worldRadius:WORLD_RADIUS,timeOfDay:world.timeOfDay,nightBlend:world.nightBlend,trees:world.treeKinds,treeSizes:world.treeSizes,bearScale:world.dudu.scale.x,characterModel:world.dudu.userData.blenderDudu?{source:'blender',weights:world.dudu.userData.blenderDudu.weights,bones:world.dudu.userData.blenderDudu.asset.bones.size}:null,moonJourney:world.moonJourney?{phase:world.moonJourney.phase,progress:world.moonJourney.progress}:null,flowerBeds:world.flowerBeds,butterflies:world.butterflies.map(b=>b.kind),lamps:{count:world.roadLighting.sites.length,sites:world.roadLighting.sites,glowing:world.roadLighting.glass.emissiveIntensity,lights:world.roadLighting.lights.map(l=>l.intensity)},guidance:guideTarget?{id:guideTarget.id,path:guidePath}:null,following:!!world.companion,expressions:[world.dudu,world.bubu].map(b=>({name:b.name,mood:b.userData.expression.mood,reaction:b.userData.expression.reaction,remaining:b.userData.expression.remaining,values:b.userData.expression.values,stride:b.userData.strideWeight,run:b.userData.runWeight})),partyTime:world.storyTime,candleLit:world.candleFlame.visible,weather:{mode:world.weather.mode,blend:world.weather.blend,time:world.weather.time,rain:world.rain.streaks.visible?world.rain.drops.length:0,puddles:world.rain.puddles.visible?world.rain.sites.length:0,ripples:world.rain.ripples.visible?world.rain.rippleSites.length:0,audioRain:!!audio.raining,snowVisible:world.atmosphere.snow.visible,snow:world.atmosphere.flakes.length,birds:world.atmosphere.birds.map(b=>({x:b.group.position.x,y:b.group.position.y,z:b.group.position.z})),windLeaves:world.atmosphere.leaves.count,sun:world.sky.sun.visible,moon:world.sky.moon.visible,clouds:world.sky.clouds.length,stars:world.sky.stars.geometry.attributes.position.count,shootingStar:world.sky.meteor.visible,nightTime:world.sky.nightTime,fireflies:world.atmosphere.fireflies.visible?world.atmosphere.fireflyData.length:0,petals:world.atmosphere.petals.count}})),project:(x,z,y=0)=>{const point=new THREE.Vector3(x,y,z).project(world.camera),rect=$('world').getBoundingClientRect();return{x:rect.left+(point.x*.5+.5)*rect.width,y:rect.top+(-point.y*.5+.5)*rect.height};}};
+  if(import.meta.env.DEV)window.__dudu={snapshot:()=>JSON.parse(JSON.stringify({state,adventure,photo:{active:photo.active,perspective:!!photo.camera?.isPerspectiveCamera,position:photo.camera?.position,target:photo.controls?.target},ready,playing,paused:isPaused(),camera:{mode:world.cameraMode,perspective:!!world.camera.isPerspectiveCamera,position:world.camera.position,target:world.story==='moon'?world.moonLook:world.thirdPerson?world.follow.target:world.cameraTarget,yaw:world.movementYaw,pitch:world.follow.pitch,fov:world.camera.fov,distance:world.follow.distance,arm:world.follow.arm,avoidYaw:world.follow.avoidYaw,avoidPitch:world.follow.avoidPitch},nearby:nearby?.id,position:state.position,obstacles:world.obstacles,sound:audio.enabled,route:route.length,render:world.renderer.info.render,quality:world.quality,environment:{tufts:world.meadow.tufts,grassCells:world.meadow.cells.length,grassTime:world.meadow.uniforms.time.value,breeze:world.meadow.uniforms.breeze.value,ferns:world.understory.count,sunbeams:world.sunlight.group.visible,fogNear:world.scene.fog.near,fogFar:world.scene.fog.far},time:world.time,view:world.viewSize,zoom:world.cameraMode==='third-person'?world.follow.distance:world.zoomView,overview:world.overview,story:world.story,bubuVisible:world.bubu.visible,bubuPosition:world.bubu.position,duduPosition:world.dudu.position,animals:world.animals.map(a=>({kind:a.kind,x:a.group.position.x,z:a.group.position.z,action:a.brain.mode,model:a.blenderSheep?'blender':'procedural',clip:a.blenderSheep?.clip,blink:a.blenderSheep?.blink,distance:a.brain.distance})),balloons:world.balloons.length,worldRadius:WORLD_RADIUS,timeOfDay:world.timeOfDay,nightBlend:world.nightBlend,trees:world.treeKinds,treeSizes:world.treeSizes,bearScale:world.dudu.scale.x,characterModel:world.dudu.userData.blenderDudu?{source:'blender',weights:world.dudu.userData.blenderDudu.weights,bones:world.dudu.userData.blenderDudu.asset.bones.size}:null,moonJourney:world.moonJourney?{phase:world.moonJourney.phase,progress:world.moonJourney.progress}:null,flowerBeds:world.flowerBeds,butterflies:world.butterflies.map(b=>b.kind),lamps:{count:world.roadLighting.sites.length,sites:world.roadLighting.sites,glowing:world.roadLighting.glass.emissiveIntensity,lights:world.roadLighting.lights.map(l=>l.intensity)},guidance:guideTarget?{id:guideTarget.id,path:guidePath}:null,following:!!world.companion,expressions:[world.dudu,world.bubu].map(b=>({name:b.name,mood:b.userData.expression.mood,reaction:b.userData.expression.reaction,remaining:b.userData.expression.remaining,values:b.userData.expression.values,stride:b.userData.strideWeight,run:b.userData.runWeight})),partyTime:world.storyTime,candleLit:world.candleFlame.visible,weather:{mode:world.weather.mode,blend:world.weather.blend,time:world.weather.time,rain:world.rain.streaks.visible?world.rain.drops.length:0,puddles:world.rain.puddles.visible?world.rain.sites.length:0,ripples:world.rain.ripples.visible?world.rain.rippleSites.length:0,audioRain:!!audio.raining,snowVisible:world.atmosphere.snow.visible,snow:world.atmosphere.flakes.length,birds:world.atmosphere.birds.map(b=>({x:b.group.position.x,y:b.group.position.y,z:b.group.position.z})),windLeaves:world.atmosphere.leaves.count,sun:world.sky.sun.visible,moon:world.sky.moon.visible,clouds:world.sky.clouds.length,stars:world.sky.stars.geometry.attributes.position.count,shootingStar:world.sky.meteor.visible,nightTime:world.sky.nightTime,fireflies:world.atmosphere.fireflies.visible?world.atmosphere.fireflyData.length:0,petals:world.atmosphere.petals.count}})),project:(x,z,y=0)=>{const point=new THREE.Vector3(x,y,z).project(world.camera),rect=$('world').getBoundingClientRect();return{x:rect.left+(point.x*.5+.5)*rect.width,y:rect.top+(-point.y*.5+.5)*rect.height};}};
 }

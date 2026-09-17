@@ -3,7 +3,7 @@ export class Wildlife {
   constructor(kind,x,z,seed=1){
     this.kind=kind;this.home={x,z};this.position={x,z};this.target=null;
     this.seed=seed+41;this.mode=kind==='rabbit'?'idle':'graze';this.timer=1+this.random()*4;
-    this.heading=this.random()*Math.PI*2;this.distance=0;this.speed=0;
+    this.heading=this.random()*Math.PI*2;this.distance=0;this.speed=0;this.greetCooldown=0;
   }
   random(){this.seed=(Math.imul(this.seed,1664525)+1013904223)>>>0;return this.seed/4294967296;}
   chooseTarget(walkable,away){
@@ -19,9 +19,22 @@ export class Wildlife {
     }
     this.target=null;this.mode='idle';this.timer=1.5;
   }
+  canGreet(player,night=0){
+    return this.greetCooldown<=0&&night<.7&&this.mode!=='sleep'&&Math.hypot(player.x-this.position.x,player.z-this.position.z)<=3.1;
+  }
+  greet(player,night=0){
+    if(!this.canGreet(player,night))return false;
+    this.target=null;this.mode='friendly';this.timer=4;this.greetCooldown=8;this.speed=0;
+    this.heading=Math.atan2(player.x-this.position.x,player.z-this.position.z);return true;
+  }
   update(dt,player,walkable,night=0){
     if(dt<=0)return;this.speed=0;
-    this.timer-=dt;
+    this.timer-=dt;this.greetCooldown=Math.max(0,this.greetCooldown-dt);
+    if(this.mode==='friendly'){
+      this.heading=Math.atan2(player.x-this.position.x,player.z-this.position.z);
+      if(this.timer<=0||Math.hypot(player.x-this.position.x,player.z-this.position.z)>5){this.mode='idle';this.timer=2;}
+      return;
+    }
     const near=Math.hypot(player.x-this.position.x,player.z-this.position.z)<(this.kind==='deer'?3.5:2.5);
     if(near&&!this.target&&this.mode!=='alert') {this.mode='alert';this.timer=.8;}
     if(this.mode==='alert'){

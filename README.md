@@ -72,6 +72,33 @@ After the party, the pointer leads to the **Moonwatch nest** in the northwestern
 
 **Refreshing always starts a new adventure:** Dudu returns to his nest, the bag is empty, Bubu stays inside, and the birthday and companion walk reset. Progress is kept only while this page remains open. Older stored progress is cleared. Sound, weather, and day/night preferences remain saved. The pause menu’s restart button also starts over.
 
+## Adventure journal and postcards
+
+The progress button below the gift guide opens Dudu's journal. Its **Gift bag**,
+**Places** and **Friends** tabs keep the birthday hunt and optional discoveries
+in one place. Six landmarks add stamps and short memories as you visit. Meet
+rabbits, sheep, deer and foxes with **E** or the touch heart during the day;
+nearby gifts take priority, and sleeping friends rest at night. Greetings bring
+a brief look toward Dudu and a small heart effect. Places and friends do not
+change the eight-gift birthday requirement.
+
+Choose a place's trail to walk there automatically. Tap the guide again or
+**Walking · Stop** to stop, and use **Back to birthday trail** to restore gift
+guidance. Manual movement also stops automatic walking.
+
+Press **X**, or choose **Make a postcard** from the journal or pause menu, to
+freeze the adventure and compose a picture. Drag or use arrow keys to orbit;
+scroll, pinch or use **+ / −** to zoom. **Face Dudu** offers a closer angle;
+**Original view** restores the starting composition, including overhead views.
+Add a caption and download a PNG with a paper border. Closing the camera
+restores gameplay. Postcards are also available while stargazing at Moonwatch,
+and stay unavailable during moving story scenes. Pictures are generated in
+the browser. Refresh and restart clear the journal and its postcard counter.
+
+See [the adventure playtest](ADVENTURE-PLAYTEST.md) for a short tour. Run
+`npm run test:adventure` and `npm run test:adventure -- --mobile` with the dev
+server running to check the new desktop and emulated phone interactions.
+
 ## Audio and artwork
 
 An editable **Blender Dudu prototype** is available at **`/character.html`**. Rotate and zoom the model, preview its idle/walk clips and three facial expressions, then use **Try in the forest** to play with it at `/?dudu=blender`. The default forest keeps the established bears while this first model is reviewed. Open `art/characters/dudu.blend` in Blender; see [the character workflow](art/characters/README.md) for rebuilding, export settings and tests.

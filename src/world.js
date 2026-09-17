@@ -12,6 +12,7 @@ import { ForestRain } from './rain.js';
 import { ForestSurfaces } from './forest-surfaces.js';
 import { ForestMeadow, meadowGround, meadowSpace } from './forest-floor.js';
 import { ForestSunlight } from './forest-sunlight.js';
+import { ForestReactions } from './forest-reactions.js';
 import { RoadLighting } from './road-lighting.js';
 import { FollowCamera } from './follow-camera.js';
 import { buildMoonNest } from './moon-nest.js';
@@ -188,6 +189,7 @@ export class ForestWorld {
     this.moonNest=buildMoonNest(this.land,this.obstacles,this.cameraObstacles);
     await progress(60,'Planting flowers and waking the butterflies…');
     this.buildDetails();this.buildGifts();this.buildFields();
+    this.reactions=new ForestReactions(this.scene,this.heartGeo);
     await progress(66,'Fluffing the sheep’s wool…');
     try{
       const {loadSheepTemplate,attachSheepModel}=await import('./blender-sheep.js');
@@ -506,7 +508,7 @@ export class ForestWorld {
   }
   beginDeparture(){if(this.state.departed){this.story='exploring';this.dudu.visible=true;return;}this.story='departure';this.storyTime=0;this.dudu.visible=false;this.setCamera(true);}
   revealBubu(){if(!shouldRevealBubu(this.state)||this.cinematic)return;this.story='arrival';this.storyTime=0;this.bubu.visible=false;this.events.push('arrival-start');}
-  resetStory(){this.moonJourney=null;[this.dudu,this.bubu].forEach(b=>{b.userData.expression.reset();b.userData.lastPosition=null;b.userData.gait=b.userData.strideWeight=b.userData.runWeight=0;b.userData.body.position.set(0,0,0);b.userData.body.rotation.set(0,0,0);});[this.dudu,this.bubu].forEach(b=>{b.userData.head.rotation.x=0;b.userData.groundShadow.visible=true;});this.story='ready';this.storyTime=0;this.companion=null;this.partyGifts?.removeFromParent();this.partyGifts=null;this.bubu.visible=false;this.bubu.position.set(BUBU.x,.25,BUBU.z);this.bubu.userData.arms.forEach(arm=>arm.rotation.set(0,0,0));this.dudu.visible=false;this.duduNest.door.rotation.y=0;this.bubuNest.door.rotation.y=0;this.events=[];this.overview=false;this.zoomView=this.mobile?25:27;this.beginDeparture();}
+  resetStory(){this.friendMoment=null;this.reactions.reset();this.animals.forEach(a=>{a.brain.greetCooldown=0;if(a.brain.mode==='friendly'){a.brain.mode='idle';a.brain.timer=1;}});this.moonJourney=null;[this.dudu,this.bubu].forEach(b=>{b.userData.expression.reset();b.userData.lastPosition=null;b.userData.gait=b.userData.strideWeight=b.userData.runWeight=0;b.userData.body.position.set(0,0,0);b.userData.body.rotation.set(0,0,0);});[this.dudu,this.bubu].forEach(b=>{b.userData.head.rotation.x=0;b.userData.groundShadow.visible=true;});this.story='ready';this.storyTime=0;this.companion=null;this.partyGifts?.removeFromParent();this.partyGifts=null;this.bubu.visible=false;this.bubu.position.set(BUBU.x,.25,BUBU.z);this.bubu.userData.arms.forEach(arm=>arm.rotation.set(0,0,0));this.dudu.visible=false;this.duduNest.door.rotation.y=0;this.bubuNest.door.rotation.y=0;this.events=[];this.overview=false;this.zoomView=this.mobile?25:27;this.beginDeparture();}
   updateStory(dt){
     if(!this.cinematic)return;
     this.storyTime+=dt;
@@ -594,7 +596,7 @@ export class ForestWorld {
       batch.nodes.forEach(node=>node.removeFromParent());batch.geometries.forEach(geo=>geo.dispose());
     }
   }
-  collect(id){this.dudu.userData.expression.react('delighted',2.2);const gift=this.gifts.get(id);if(gift){gift.group.visible=false;gift.ring.visible=false;gift.sparkle.visible=false;}this.addBackpackGifts();}
+  collect(id){this.reactions.emit(this.dudu.position,this.reducedMotion);this.dudu.userData.expression.react('delighted',2.2);const gift=this.gifts.get(id);if(gift){gift.group.visible=false;gift.ring.visible=false;gift.sparkle.visible=false;}this.addBackpackGifts();}
   addBackpackGifts(){
     if(this.backpackGifts)this.dudu.userData.body.remove(this.backpackGifts);
     this.backpackGifts=new THREE.Group();this.dudu.userData.body.add(this.backpackGifts);
@@ -652,6 +654,16 @@ export class ForestWorld {
     if(!this.state.completed||this.cinematic)return;
     this.dudu.userData.expression.react('content',3.2);this.bubu.userData.expression.react('shy',3.2);
   }
+  nearbyFriend(){
+    return this.animals.filter(a=>a.brain.canGreet(this.state.position,this.nightBlend))
+      .sort((a,b)=>a.group.position.distanceToSquared(this.dudu.position)-b.group.position.distanceToSquared(this.dudu.position))[0];
+  }
+  greetAnimal(animal){
+    if(this.cinematic||!animal.brain.greet(this.state.position,this.nightBlend))return false;
+    this.friendMoment={animal,remaining:4};this.dudu.userData.expression.react('content',3);
+    this.dudu.rotation.y=Math.atan2(animal.group.position.x-this.dudu.position.x,animal.group.position.z-this.dudu.position.z);
+    this.reactions.emit(animal.group.position,this.reducedMotion);return true;
+  }
   updateBearExpressions(dt,moving){
     const scripted=this.cinematic,time=this.storyTime+dt;
     let duduMood='calm',bubuMood='calm',duduTarget=null,bubuTarget=null;
@@ -668,6 +680,11 @@ export class ForestWorld {
     }else{
       let distance=4;
       for(const gift of GIFTS){const d=Math.hypot(this.state.position.x-gift.x,this.state.position.z-gift.z);if(!this.state.collected.includes(gift.id)&&d<distance){distance=d;duduTarget=gift;duduMood='curious';}}
+    }
+    if(this.friendMoment){
+      this.friendMoment.remaining-=dt;
+      if(moving||scripted||this.friendMoment.remaining<=0)this.friendMoment=null;
+      else{duduTarget=this.friendMoment.animal.group.position;duduMood='content';}
     }
     this.dudu.userData.expression.update(dt,{mood:duduMood,look:lookAtBearTarget(this.dudu,duduTarget),scripted},this.reducedMotion);
     this.bubu.userData.expression.update(dt,{mood:bubuMood,look:lookAtBearTarget(this.bubu,bubuTarget),scripted},this.reducedMotion);
@@ -766,6 +783,6 @@ export class ForestWorld {
     this.rain.update(this.weather,this.playing?this.state.position:{x:0,z:0},this.nightBlend,this.reducedMotion);
     this.sky.update(paused?0:dt,t,this.nightBlend,this.reducedMotion,this.story==='moon'?this.moonJourney.progress:0,this.weather.blend);
     if(this.guidance.count&&!this.reducedMotion)this.guidance.material.opacity=.65+Math.sin(t*2)*.2;
-    this.setCamera(false,dt);this.renderer.clear();this.sky.render(this.renderer);this.renderer.clearDepth();this.renderer.render(this.scene,this.camera);
+    this.setCamera(false,dt);this.reactions.update(paused?0:dt,this.camera);this.renderer.clear();this.sky.render(this.renderer);this.renderer.clearDepth();this.renderer.render(this.scene,this.camera);
   }
 }

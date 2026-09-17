@@ -8,6 +8,7 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="stylesheet" href="/src/style.css" />
     <link rel="stylesheet" href="/src/mobile.css" />
+    <link rel="stylesheet" href="/src/adventure.css" />
     <title>Dudu finds Bubu — A birthday adventure</title>
   </head>
   <body>
@@ -85,6 +86,14 @@
           <span id="guide-art" aria-hidden="true"></span><span class="guide-copy"><strong id="guide-name"></strong><small id="guide-detail"></small></span><span id="guide-arrow" aria-hidden="true">↑</span>
         </button>
         <button id="gift-pointer" class="gift-pointer hidden" aria-label="Walk to tracked gift"><span id="pointer-name"></span><span class="pointer-arrow" aria-hidden="true">↓</span></button>
+        <button id="journey-status" class="journey-status hidden" aria-label="Open adventure journal"><span id="journey-icon" aria-hidden="true"></span><span><strong id="journey-label">0 / 8 birthday gifts</strong><span id="journey-dots" aria-hidden="true"></span></span></button>
+        <div id="walk-status" class="walk-status hidden"><button id="stop-walking">Walking · Stop</button><button id="return-birthday" hidden>Back to birthday trail ↗</button></div>
+        <aside id="discovery-notice" class="discovery-notice hidden" role="status" aria-live="polite"><span id="discovery-icon" aria-hidden="true"></span><div><small>A LITTLE DISCOVERY</small><strong id="discovery-name"></strong><span>Added to your adventure journal</span></div></aside>
+        <section id="photo-ui" class="photo-ui hidden" aria-label="Postcard camera">
+          <div class="photo-top"><button id="photo-exit">← Back to adventure</button><span>POSTCARDS FROM SUNNYWOOD<small>Your adventure is paused</small></span></div>
+          <div class="photo-corners" aria-hidden="true"></div>
+          <div class="photo-bottom"><p>Drag or use arrow keys to look around · Scroll, pinch or + / − to zoom</p><div class="photo-actions"><button id="photo-reset">Original view</button><button id="photo-portrait">Face Dudu</button><input id="photo-message" type="text" maxlength="80" value="A little journey. A lot of love." aria-label="Postcard message"/><button id="photo-save" class="primary-button">Save postcard ↓</button></div><span id="photo-status" role="status" aria-live="polite"></span></div>
+        </section>
         <div id="party-caption" class="party-caption hidden" role="status" aria-live="polite"><span>MAKE A LITTLE WISH</span><strong id="party-line">Happy birthday, Bubu ♡</strong></div>
         <div id="moon-caption" class="moon-caption hidden" role="status" aria-live="polite"><span>THE MOONWATCH TREE</span><strong id="moon-line">One more little adventure, together.</strong><small id="moon-detail"></small></div>
 
@@ -125,20 +134,27 @@
 
       <dialog id="bag-dialog" class="paper-dialog bag-dialog" aria-label="Dudu’s gift bag">
         <button class="dialog-close" data-close aria-label="Close gift bag">×</button>
-        <div class="eyebrow">LITTLE THINGS, CARRIED WITH LOVE</div><h2>Dudu’s little bag</h2>
+        <div class="eyebrow" id="journal-chapter">CHAPTER 1 / 4</div><h2 id="journal-title">A bag full of love</h2>
+        <p id="journal-description">Eight little surprises, at your own pace.</p><div id="journal-progress" class="journal-progress"></div>
+        <div class="journal-tabs" role="tablist" aria-label="Adventure journal"><button role="tab" id="tab-gifts" data-journal-tab="gifts" aria-controls="panel-gifts" aria-selected="true">Gift bag</button><button role="tab" id="tab-places" data-journal-tab="places" aria-controls="panel-places" aria-selected="false" tabindex="-1">Places</button><button role="tab" id="tab-friends" data-journal-tab="friends" aria-controls="panel-friends" aria-selected="false" tabindex="-1">Friends</button></div>
+        <section id="panel-gifts" role="tabpanel" data-journal-panel="gifts" aria-labelledby="tab-gifts">
         <p id="quest-description">Find eight surprises on the way to Bubu’s nest.</p>
         <div class="bag-slots" id="bag-slots"></div>
         <div class="quest-progress"><span id="progress-fill"></span></div>
         <div class="quest-bottom"><span id="progress-text">0 of 8 gifts collected</span><button id="hint-button">A little hint ↗</button></div>
         <p class="bag-hint" id="bag-hint">Pick a gift to read Dudu’s little note.</p>
         <button class="text-button hidden" id="track-gift">Follow this gift’s trail ↗</button>
+        </section>
+        <section id="panel-places" role="tabpanel" data-journal-panel="places" aria-labelledby="tab-places" hidden><p class="journal-intro">Little detours, lovely memories. Discover these places as you wander.</p><div id="journal-places" class="journal-places"></div></section>
+        <section id="panel-friends" role="tabpanel" data-journal-panel="friends" aria-labelledby="tab-friends" hidden><p class="journal-intro">Walk close and say hello with E or the heart button. Let sleeping friends rest at night.</p><div id="journal-friends" class="journal-friends"></div></section>
+        <div class="journal-postcard"><span id="postcard-count">Make a postcard to remember this little world.</span><button id="journal-photo">Make a postcard ↗</button></div>
         <button class="primary-button" data-close>Back to the forest <span>↗</span></button>
       </dialog>
       <dialog id="help-dialog" class="paper-dialog">
         <button class="dialog-close" data-close aria-label="Close">×</button>
         <span class="dialog-flower">✳</span><div class="eyebrow">A FEW LITTLE POINTERS</div><h2>A walk in the woods.</h2>
-        <p>Gather all eight birthday gifts before visiting Bubu’s nest. Only then will she come outside! Follow the glowing trail, or select a missing gift in your bag to track it. Tap the gift pointer to walk there.</p>
-        <div class="control-list"><div><span><kbd>W A S D</kbd> / <kbd>↑ ← ↓ →</kbd></span><span>Wander around</span></div><div><kbd>SHIFT</kbd><span>Run a little faster</span></div><div><kbd>E</kbd><span>Pick up a gift / talk to Bubu</span></div><div><kbd>M</kbd><span>Open your forest map</span></div><div><kbd>B</kbd><span>Open the gift bag</span></div><div><kbd>+ / −</kbd><span>Zoom in / out</span></div><div><kbd>0</kbd><span>See the whole forest</span></div><div><kbd>T</kbd><span>Switch day / night</span></div><div><kbd>V</kbd><span>Sunshine / gentle rain</span></div><div><kbd>ESC</kbd><span>Pause & take a breath</span></div></div>
+        <p>Gather all eight birthday gifts before visiting Bubu’s nest. Only then will she come outside! Follow the glowing trail, or select a missing gift in your bag to track it. Tap the gift pointer to walk there, and tap again to stop. Your journal also holds six places to discover and four kinds of forest friends to meet.</p>
+        <div class="control-list"><div><span><kbd>W A S D</kbd> / <kbd>↑ ← ↓ →</kbd></span><span>Wander around</span></div><div><kbd>SHIFT</kbd><span>Run a little faster</span></div><div><kbd>E</kbd><span>Pick up a gift / greet a friend</span></div><div><kbd>M</kbd><span>Open your forest map</span></div><div><kbd>B</kbd><span>Gift bag, places and forest friends</span></div><div><kbd>X</kbd><span>Make a forest postcard</span></div><div><kbd>+ / −</kbd><span>Zoom in / out</span></div><div><kbd>0</kbd><span>See the whole forest</span></div><div><kbd>T</kbd><span>Switch day / night</span></div><div><kbd>V</kbd><span>Sunshine / gentle rain</span></div><div><kbd>ESC</kbd><span>Pause & take a breath</span></div></div>
         <div class="control-list camera-help"><div><kbd>C</kbd><span>Third person / overhead view</span></div><div><kbd>R</kbd><span>Look from behind Dudu</span></div><div><kbd>J / L · I / K</kbd><span>Rotate / tilt the camera</span></div><div><span>Drag / swipe the forest</span><span>Look around in third person</span></div></div>
         <p class="dialog-footnote">At the picnic, choose “Celebrate Bubu’s birthday”, then wander together. Click or tap the ground to walk; drag to look around and scroll to zoom. On a phone or tablet, use the thumbstick to walk, swipe the forest to look, tap the heart to interact, and pinch to zoom. Turn phones sideways to play. After the birthday, follow the moon pointer and climb the Moonwatch tree together. Watch the stars from the nest, then choose “Climb down together” to keep exploring. Refreshing starts a fresh adventure with an empty gift bag.</p><button class="primary-button" data-close>Got it. Let’s wander <span>↗</span></button>
       </dialog>
@@ -146,11 +162,11 @@
       <dialog id="map-dialog" class="paper-dialog map-dialog">
         <button class="dialog-close" data-close aria-label="Close map">×</button><div class="eyebrow">FOLLOW YOUR LITTLE HEART</div><h2>Sunnywood Forest</h2><p>Eight surprises, two little homes, and a Moonwatch nest above the trees.</p>
         <canvas id="large-map" width="760" height="650" aria-label="Sunnywood forest map with marked gift locations and Bubu’s picnic"></canvas>
-        <div class="map-legend"><span><i class="map-dot"></i> Dudu</span><span><i class="map-dot gift-dot"></i> A surprise</span><span><i class="map-dot bubu-dot"></i> Bubu’s picnic</span></div>
+        <div class="map-legend"><span><i class="map-dot"></i> Dudu</span><span><i class="map-dot gift-dot"></i> A surprise</span><span><i class="map-dot bubu-dot"></i> Bubu’s picnic</span></div><button class="text-button" id="map-journal">Explore places in your journal ↗</button>
       </dialog>
 
       <dialog id="pause-dialog" class="paper-dialog">
-        <button class="dialog-close" data-close aria-label="Resume game">×</button><span class="dialog-flower">☁</span><div class="eyebrow">NO NEED TO HURRY</div><h2>A little breather.</h2><p>The forest will be right here.<br/>Your birthday surprises are safely in your bag.</p><button class="primary-button" data-close>Keep wandering <span>↗</span></button><div class="pause-options"><button id="pause-sound" class="menu-option">Sound on</button><button id="pause-time" class="menu-option" aria-pressed="false">Switch to night mode</button><button id="pause-weather" class="menu-option" aria-pressed="false">Start gentle rain</button><button id="pause-help" class="menu-option">How to play</button><button id="fullscreen-button" class="menu-option">Enter full screen</button></div><button class="text-button" id="restart-button">Start a fresh adventure</button>
+        <button class="dialog-close" data-close aria-label="Resume game">×</button><span class="dialog-flower">☁</span><div class="eyebrow">NO NEED TO HURRY</div><h2>A little breather.</h2><p>The forest will be right here.<br/>Your birthday surprises are safely in your bag.</p><button class="primary-button" data-close>Keep wandering <span>↗</span></button><div class="pause-options"><button id="pause-sound" class="menu-option">Sound on</button><button id="pause-time" class="menu-option" aria-pressed="false">Switch to night mode</button><button id="pause-weather" class="menu-option" aria-pressed="false">Start gentle rain</button><button id="pause-journal" class="menu-option">Adventure journal</button><button id="pause-photo" class="menu-option">Make a postcard</button><button id="pause-help" class="menu-option">How to play</button><button id="fullscreen-button" class="menu-option">Enter full screen</button></div><button class="text-button" id="restart-button">Start a fresh adventure</button>
       </dialog>
 
       <dialog id="ending-dialog" class="paper-dialog ending-dialog">
