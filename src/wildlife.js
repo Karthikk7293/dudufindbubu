@@ -96,11 +96,12 @@ export function updateAnimal(animal,dt,time,player,walkable,night,reducedMotion)
   group.position.x=brain.position.x;group.position.z=brain.position.z;
   const ease=1-Math.exp(-dt*6),moving=brain.speed>.01;
   const angle=Math.atan2(Math.sin(brain.heading-group.rotation.y),Math.cos(brain.heading-group.rotation.y));group.rotation.y+=angle*ease;
-  const cycle=brain.distance*(kind==='rabbit'?12:8),graze=brain.mode==='graze',sleep=brain.mode==='sleep';
+  const cycle=brain.distance*(kind==='rabbit'?12:8),graze=brain.mode==='graze',sleep=brain.mode==='sleep',friendly=brain.mode==='friendly';
   const mix=(a,b)=>a+(b-a)*ease;
   if(neck)neck.rotation.x=mix(neck.rotation.x,graze?1.82:sleep?.4:0);
   head.rotation.x=mix(head.rotation.x,sleep?.7:graze?(neck?-.1:.75)+Math.sin(time*2+phase)*.045:moving?-.05:0);
   head.rotation.y=mix(head.rotation.y,moving||brain.mode==='alert'?0:reducedMotion?0:Math.sin(time*.6+phase)*.12);
+  head.rotation.z=mix(head.rotation.z,friendly?.12:0);
   body.position.y=mix(body.position.y,reducedMotion?0:kind==='rabbit'&&moving?Math.max(0,Math.sin(cycle))*.18:Math.sin(time*2+phase)*.009);
   legs.forEach((leg,i)=>{
     const wave=Math.sin(cycle+(kind==='rabbit'?(i%2)*Math.PI:(i===0||i===3?0:Math.PI)));
@@ -108,7 +109,7 @@ export function updateAnimal(animal,dt,time,player,walkable,night,reducedMotion)
     leg.userData.knee.rotation.x=mix(leg.userData.knee.rotation.x,moving?Math.max(0,-wave)*.35:0);
   });
   ears.forEach((ear,i)=>{const flick=!reducedMotion&&((time+phase+i*.9)%7)<.3?Math.sin((time+phase+i*.9)%7/ .3*Math.PI)*.15:0;ear.rotation.z=mix(ear.rotation.z,ear.userData.restZ+flick);});
-  tail.rotation.y=reducedMotion?0:Math.sin(time*(moving?3:1.3)+phase)*(kind==='fox'?.18:.07);
+  tail.rotation.y=reducedMotion?0:Math.sin(time*(friendly?5:moving?3:1.3)+phase)*(friendly?.23:kind==='fox'?.18:.07);
   const blink=(time+phase)%6.3;eyes.forEach(eye=>eye.scale.y=.044*(sleep?.12:!reducedMotion&&blink<.16?Math.max(.1,Math.abs(blink-.08)/.08):1));
   animal.blenderSheep?.update(dt,time,brain,reducedMotion);
 }

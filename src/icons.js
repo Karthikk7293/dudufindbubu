@@ -1,5 +1,9 @@
 const svg = (body, extra = '') => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" ${extra}>${body}</svg>`;
 export const icons = {
+  book: svg('<path d="M12 5C9 3 5 3 2 4v15c3-1 7-1 10 1 3-2 7-2 10-1V4c-3-1-7-1-10 1Zm0 0v15"/>'),
+  paw: svg('<ellipse cx="5" cy="8" rx="2" ry="3"/><ellipse cx="10" cy="5" rx="2" ry="3"/><ellipse cx="16" cy="5" rx="2" ry="3"/><ellipse cx="21" cy="9" rx="2" ry="3"/><path d="M5 18c0-3 4-8 7-8s7 5 7 8-4 2-7 2-7 1-7-2Z"/>'),
+  water: svg('<path d="M2 8q3-3 6 0t6 0 6 0M2 14q3-3 6 0t6 0 6 0M2 20q3-3 6 0t6 0 6 0"/>'),
+  flower: svg('<path d="M12 7c-8-10-14 3-5 5-10 8 3 14 5 5 8 10 14-3 5-5 10-8-3-14-5-5Z"/><circle cx="12" cy="12" r="2"/>'),
   camera: svg('<rect x="3" y="6" width="18" height="14" rx="3"/><path d="m8 6 1-3h6l1 3"/><circle cx="12" cy="13" r="4"/>'),
   recenter: svg('<path d="M4 9a8 8 0 1 1 0 7M4 4v5h5"/><circle cx="12" cy="12" r="2"/>'),
   sun: svg('<circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5"/>'),

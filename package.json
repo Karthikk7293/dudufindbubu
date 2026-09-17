@@ -16,6 +16,7 @@
     "test:mobile": "node tests/mobile.browser.mjs",
     "test:engine": "node tests/engine.browser.mjs",
     "test:engine:inputs": "node tests/engine.inputs.mjs",
+    "test:adventure": "node tests/adventure.browser.mjs",
     "test:story": "node tests/forest-story.mjs",
     "test:deployment": "node tests/deployment.browser.mjs",
     "model:dudu": "blender --background --python scripts/build-dudu.py",

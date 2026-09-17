@@ -24,3 +24,11 @@ export function rainPosition(drop,time,focus,out) {
   out.z=focus.z+wrap(drop.z+time*.35-focus.z+17,34)-17;
   return out;
 }
+
+// Canopies shield the space below their curved fabric, not the rain above it.
+export function underRainCover(point,covers){
+  return covers.some(cover=>{
+    const radial=((point.x-cover.x)**2+(point.z-cover.z)**2)/(cover.radius**2);
+    return radial<1&&point.y<cover.y+cover.height*(1-radial);
+  });
+}

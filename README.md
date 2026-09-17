@@ -64,6 +64,20 @@ The **weather button** (or **V**) brings gentle rain to the forest. The palette 
 
 Weather changes fade during play and apply immediately from the pause menu without resuming the adventure. The setting is remembered, while refreshing still resets the gift hunt. Phones use half the rain particles; streaks, puddles, and ripples use three batched draws. Reduced motion keeps the wet surfaces and overcast lighting while hiding falling rain and expanding ripples. A synthesized stereo rain layer fades in when sound is enabled; no audio is downloaded from Instagram.
 
+Rain opens Dudu's honey-yellow umbrella and Bubu's rose-pink umbrella. They hold
+the curved handles in their paws as they walk, with rain blocked beneath the
+fabric. Umbrellas appear after the bears leave their doorways, are put away for
+the Moonwatch ladder, and return while stargazing if it is still raining. Clear
+skies put them away. Pausing freezes the props; changing weather in the pause
+menu still updates them. The Blender Dudu preview uses the same paw controls.
+
+On touch devices with browser vibration support, short haptic pulses accompany
+buttons, movement starts, gifts, greetings, discoveries and celebrating.
+**Pause → Haptics on/off** remembers your preference. Reduced motion defaults
+to haptics off unless you explicitly enable them. Unsupported browsers show
+**Haptics unavailable**; actual vibration also depends on device settings.
+There is no continuous vibration for footsteps or rain.
+
 The playground fills the viewport when play starts and requests native browser fullscreen where supported. Only compact gift guidance, day/night, weather, bag, map, pause, and zoom controls stay visible. Sound, help, fullscreen, and restart are available from the pause menu.
 
 Bubu stays inside until **all eight gifts are collected and Dudu reaches her clearing**. Visiting early keeps her door closed. When she walks outside, choose **Celebrate Bubu’s birthday** (or press E nearby) to start the party: Dudu sets down the gifts, Bubu makes a candle wish, and both enjoy music and heart confetti. After the party, choose **Walk together**. Bubu follows Dudu around trees and over bridges, and you can stop to share a little moment.
@@ -71,6 +85,33 @@ Bubu stays inside until **all eight gifts are collected and Dudu reaches her cle
 After the party, the pointer leads to the **Moonwatch nest** in the northwestern forest. At the ladder, press **E** or tap **Climb to the moon nest together**. Both bears walk to the ladder, then climb as daylight gradually turns to night. The camera rises with them to an open nest with a moon, clouds, stars, and shooting stars. Stay as long as you like; choose **Climb down together** to return to the paths. Pause and restart work during the climb. The moon visit keeps the rest of this adventure at night; it does not overwrite your saved day/night preference.
 
 **Refreshing always starts a new adventure:** Dudu returns to his nest, the bag is empty, Bubu stays inside, and the birthday and companion walk reset. Progress is kept only while this page remains open. Older stored progress is cleared. Sound, weather, and day/night preferences remain saved. The pause menu’s restart button also starts over.
+
+## Adventure journal and postcards
+
+The progress button below the gift guide opens Dudu's journal. Its **Gift bag**,
+**Places** and **Friends** tabs keep the birthday hunt and optional discoveries
+in one place. Six landmarks add stamps and short memories as you visit. Meet
+rabbits, sheep, deer and foxes with **E** or the touch heart during the day;
+nearby gifts take priority, and sleeping friends rest at night. Greetings bring
+a brief look toward Dudu and a small heart effect. Places and friends do not
+change the eight-gift birthday requirement.
+
+Choose a place's trail to walk there automatically. Tap the guide again or
+**Walking · Stop** to stop, and use **Back to birthday trail** to restore gift
+guidance. Manual movement also stops automatic walking.
+
+Press **X**, or choose **Make a postcard** from the journal or pause menu, to
+freeze the adventure and compose a picture. Drag or use arrow keys to orbit;
+scroll, pinch or use **+ / −** to zoom. **Face Dudu** offers a closer angle;
+**Original view** restores the starting composition, including overhead views.
+Add a caption and download a PNG with a paper border. Closing the camera
+restores gameplay. Postcards are also available while stargazing at Moonwatch,
+and stay unavailable during moving story scenes. Pictures are generated in
+the browser. Refresh and restart clear the journal and its postcard counter.
+
+See [the adventure playtest](ADVENTURE-PLAYTEST.md) for a short tour. Run
+`npm run test:adventure` and `npm run test:adventure -- --mobile` with the dev
+server running to check the new desktop and emulated phone interactions.
 
 ## Audio and artwork
 

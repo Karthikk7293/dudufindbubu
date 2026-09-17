@@ -8,7 +8,11 @@ const errors=[];
 const ready=async page=>{await page.waitForFunction(()=>window.__dudu?.snapshot().ready||document.querySelector('#loading.has-error'));assert.equal(await page.locator('#loading.has-error').count(),0,errors.join('\n'));await page.waitForSelector('#loading',{state:'hidden'});};
 let page;
 try{
-  page=await browser.newPage({viewport:{width:1100,height:780},deviceScaleFactor:1});page.setDefaultTimeout(150000);page.on('pageerror',error=>errors.push(error.message));
+  page=await browser.newPage({viewport:{width:1100,height:780},deviceScaleFactor:process.env.SOFTWARE_RENDERING_SYNC==='1'?.6:1});page.setDefaultTimeout(150000);page.on('pageerror',error=>errors.push(error.message));
+  if(process.env.SOFTWARE_RENDERING_SYNC==='1')await page.addInitScript(()=>{
+    const frame=requestAnimationFrame.bind(window);
+    window.requestAnimationFrame=callback=>frame(time=>{callback(time);if(callback.name==='animate')document.querySelector('#world canvas')?.getContext('webgl2')?.finish();});
+  });
   const fixture={...freshState(),collected:GIFTS.map(g=>g.id),completed:true,departed:true,bubuArrived:true,position:{...MOON_NEST.entry},companionPosition:{x:-15,z:-24}};
   await page.addInitScript(fixture=>{if(!sessionStorage.getItem('moon-seeded')){window.__DUDU_TEST_STATE__=fixture;sessionStorage.setItem('moon-seeded','true');}localStorage.setItem('dudu-sound','off');localStorage.setItem('dudu-time-of-day','day');},fixture);
   const snapshot=()=>page.evaluate(()=>window.__dudu.snapshot());
@@ -31,6 +35,24 @@ try{
   await page.waitForFunction(()=>window.__dudu.snapshot().moonJourney?.phase==='stargazing');
   let s=await snapshot();assert.equal(s.nightBlend,1);assert.ok(s.duduPosition.y>10&&s.bubuPosition.y>10);assert.equal(s.weather.moon,true);assert.ok(s.weather.stars>100&&s.weather.clouds>0);
   assert.equal(await page.locator('#play-time').isDisabled(),true);await page.keyboard.press('t');assert.equal((await snapshot()).timeOfDay,'night');
+  if(process.argv.includes('--postcard')){
+    assert.ok(s.adventure.places.includes('moonwatch'));
+    await page.keyboard.press('x');assert.equal((await snapshot()).photo.active,true);
+    const frozen=await snapshot();assert.ok(frozen.photo.target.y>9);
+    await page.locator('#photo-message').fill('Two bears, one little moon.');await page.keyboard.press('x');
+    assert.equal((await snapshot()).photo.active,true,'Typing x does not close the camera');
+    await page.locator('#photo-exit').focus();await page.keyboard.press('ArrowLeft');await page.keyboard.press('+');
+    assert.notDeepEqual((await snapshot()).photo.position,frozen.photo.position);
+    assert.equal((await snapshot()).time,frozen.time);assert.deepEqual((await snapshot()).duduPosition,frozen.duduPosition);
+    const download=page.waitForEvent('download');await page.locator('#photo-save').click();await (await download).saveAs('test-results/moonwatch-postcard.png');
+    await page.locator('#photo-reset').click();await page.setViewportSize({width:900,height:600});
+    await page.screenshot({path:'test-results/moonwatch-postcard-camera.png'});
+    await page.keyboard.press('Escape');assert.equal((await snapshot()).photo.active,false);
+    await page.locator('#interact-button').click();await page.waitForFunction(()=>window.__dudu.snapshot().story==='exploring');
+    s=await snapshot();assert.ok(s.duduPosition.y<.5);assert.equal(s.following,true);assert.ok(s.adventure.places.includes('moonwatch'));
+    assert.deepEqual(errors,[]);console.log('Moonwatch discovery, photo keyboard controls, pause, export, resize and safe descent passed.');
+    await browser.close();process.exit(0);
+  }
   await page.waitForFunction(()=>window.__dudu.snapshot().weather.shootingStar);await page.screenshot({path:'test-results/moonwatch-stargazing.png'});
   console.log('Real forest routes, smaller bears, varied tree heights, dusk climb, pause and moon/star/meteor view passed.');
   if(process.argv.includes('--preview')){
