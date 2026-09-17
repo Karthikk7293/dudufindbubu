@@ -13,6 +13,7 @@ import { ForestSurfaces } from './forest-surfaces.js';
 import { ForestMeadow, meadowGround, meadowSpace } from './forest-floor.js';
 import { ForestSunlight } from './forest-sunlight.js';
 import { ForestReactions } from './forest-reactions.js';
+import { BearUmbrella, umbrellaAllowed } from './bear-umbrella.js';
 import { RoadLighting } from './road-lighting.js';
 import { FollowCamera } from './follow-camera.js';
 import { buildMoonNest } from './moon-nest.js';
@@ -226,6 +227,7 @@ export class ForestWorld {
       bear.traverse(node=>{if(node.isMesh)node.castShadow=false;});
       const shadow=new THREE.Mesh(new THREE.CircleGeometry(.68,28),new THREE.MeshBasicMaterial({color:0x56683e,transparent:true,opacity:.18,depthWrite:false}));shadow.rotation.x=-Math.PI/2;shadow.position.y=.025;shadow.scale.y=.8;bear.add(shadow);
       bear.userData.groundShadow=shadow;
+      bear.userData.umbrella=new BearUmbrella(bear,bear===this.bubu);
     });
     await progress(80,'Getting Dudu ready for his adventure…');
     this.batchStaticGeometry();
@@ -771,6 +773,7 @@ export class ForestWorld {
     // Pausing must also preserve the bears' elevated positions in the nest.
     else if(this.story==='moon')this.updateMoonJourney(0);
     this.updateLighting(paused?0:dt);
+    for(const bear of [this.dudu,this.bubu])bear.userData.umbrella.update(paused?0:dt,this.weather.blend,umbrellaAllowed(this.story,bear.name,this.storyTime,this.moonJourney?.phase));
     const detail=this.thirdPerson||(this.playing&&!this.overview&&this.zoomView<40);
     this.meadow.update(t,this.reducedMotion,this.weather.blend,this.state.position,detail);
     for(const canopy of this.canopyBatches){
@@ -780,7 +783,7 @@ export class ForestWorld {
     this.sunlight.update(t,this.nightBlend,this.weather.blend,this.reducedMotion);
     [this.dudu,this.bubu].forEach(bear=>animateBearFace(bear,t,false,this.reducedMotion));
     this.atmosphere.update(paused?0:dt,this.time,this.playing?this.state.position:{x:0,z:0},this.reducedMotion,this.nightBlend,this.weather.blend);
-    this.rain.update(this.weather,this.playing?this.state.position:{x:0,z:0},this.nightBlend,this.reducedMotion);
+    this.rain.update(this.weather,this.playing?this.state.position:{x:0,z:0},this.nightBlend,this.reducedMotion,[this.dudu,this.bubu].filter(b=>b.userData.umbrella.active).map(b=>b.userData.umbrella.cover));
     this.sky.update(paused?0:dt,t,this.nightBlend,this.reducedMotion,this.story==='moon'?this.moonJourney.progress:0,this.weather.blend);
     if(this.guidance.count&&!this.reducedMotion)this.guidance.material.opacity=.65+Math.sin(t*2)*.2;
     this.setCamera(false,dt);this.reactions.update(paused?0:dt,this.camera);this.renderer.clear();this.sky.render(this.renderer);this.renderer.clearDepth();this.renderer.render(this.scene,this.camera);

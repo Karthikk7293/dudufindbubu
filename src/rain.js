@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { TRAILS, PONDS, DUDU_NEST, BUBU_NEST, MOON_NEST } from './game-state.js';
-import { rainPosition, wrap } from './weather-state.js';
+import { rainPosition, wrap, underRainCover } from './weather-state.js';
 
 export class ForestRain {
   constructor(scene,phone=false) {
@@ -47,7 +47,7 @@ export class ForestRain {
     this.ripples=new THREE.InstancedMesh(ring,rippleMaterial,this.rippleSites.length);
     this.ripples.instanceMatrix.setUsage(THREE.DynamicDrawUsage);this.ripples.frustumCulled=false;scene.add(this.ripples);
   }
-  update(weather,focus,night,reducedMotion) {
+  update(weather,focus,night,reducedMotion,covers=[]) {
     const {blend,time}=weather,animated=blend>.01&&!reducedMotion;
     this.streaks.visible=this.ripples.visible=animated;this.puddles.visible=blend>.01;
     this.streaks.material.opacity=blend*(.58-night*.18);
@@ -57,6 +57,7 @@ export class ForestRain {
     const positions=this.streaks.geometry.attributes.position;
     this.drops.forEach((drop,i)=>{
       const p=rainPosition(drop,time,focus,this.point);
+      if(underRainCover(p,covers)){positions.setXYZ(i*2,p.x,-100,p.z);positions.setXYZ(i*2+1,p.x,-100,p.z);return;}
       positions.setXYZ(i*2,p.x,p.y,p.z);
       positions.setXYZ(i*2+1,p.x-.09,p.y+drop.length,p.z-.025);
     });positions.needsUpdate=true;
