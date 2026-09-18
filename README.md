@@ -30,6 +30,17 @@ The game runs entirely in the browser. The published files include its fonts and
 
 ## Play
 
+After Dudu leaves his nest, press **G** or use the destination badge to visit
+Honeybell Village, Lumen City, Seashell Bay, Cloudstep Mountains and Starlight
+Snowlands. Find three little memories in each place, use its local map, and
+make destination postcards. Your birthday progress and forest position are
+kept for the return trip. Bubu travels with you after her birthday. Snowlands
+has snowfall and northern lights at night; the other places support day/night
+and rain. Restart and refresh both begin a fresh forest adventure.
+
+See [DESTINATIONS-PLAYTEST.md](./DESTINATIONS-PLAYTEST.md) for the destinations,
+controls and verification steps.
+
 - **WASD / arrow keys:** move relative to the camera
 - **Shift:** run
 - **Click / tap the ground:** walk there, routing around trees and water

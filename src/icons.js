@@ -1,5 +1,9 @@
 const svg = (body, extra = '') => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" ${extra}>${body}</svg>`;
 export const icons = {
+  home: svg('<path d="m3 10 9-7 9 7v11H3Z"/><path d="M9 21v-8h6v8M2 10l10-8 10 8"/>'),
+  city: svg('<path d="M3 21V8h7v13M10 21V3h10v18M1 21h22M6 11v1m0 4v1m8-10h2m-2 4h2m-2 4h2"/>'),
+  mountain: svg('<path d="m1 21 8-15 5 9 4-12 5 18ZM6 12l3 2 3-2m4-3 2 2 2-2"/>'),
+  snow: svg('<path d="M12 2v20M3 7l18 10M3 17 21 7M9 4l3 3 3-3M9 20l3-3 3 3M3 10l4-1V5m14 9-4 1v4M3 14l4 1v4m14-9-4-1V5"/>'),
   book: svg('<path d="M12 5C9 3 5 3 2 4v15c3-1 7-1 10 1 3-2 7-2 10-1V4c-3-1-7-1-10 1Zm0 0v15"/>'),
   paw: svg('<ellipse cx="5" cy="8" rx="2" ry="3"/><ellipse cx="10" cy="5" rx="2" ry="3"/><ellipse cx="16" cy="5" rx="2" ry="3"/><ellipse cx="21" cy="9" rx="2" ry="3"/><path d="M5 18c0-3 4-8 7-8s7 5 7 8-4 2-7 2-7 1-7-2Z"/>'),
   water: svg('<path d="M2 8q3-3 6 0t6 0 6 0M2 14q3-3 6 0t6 0 6 0M2 20q3-3 6 0t6 0 6 0"/>'),

@@ -4,7 +4,7 @@ export class ForestSky {
   constructor(){
     this.scene=new THREE.Scene();this.camera=new THREE.OrthographicCamera(-1,1,1,-1,.1,30);this.camera.position.z=10;
     this.time=0;this.nightTime=0;this.night=false;this.aspect=1;this.clouds=[];
-    const gradient=new THREE.ShaderMaterial({depthWrite:false,depthTest:false,uniforms:{night:{value:0},rain:{value:0}},vertexShader:'varying vec2 vUv; void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',fragmentShader:'varying vec2 vUv; uniform float night; uniform float rain; void main(){vec3 day=mix(vec3(.85,.89,.77),vec3(.57,.75,.84),smoothstep(.12,1.,vUv.y));float sunHaze=exp(-length((vUv-vec2(.36,.83))*vec2(2.,1.))*5.);day=mix(day,vec3(1.,.89,.64),sunHaze*.48);vec3 dark=mix(vec3(.12,.20,.31),vec3(.025,.05,.12),vUv.y);vec3 clear=mix(day,dark,night);vec3 overcast=mix(vec3(.70,.78,.82),vec3(.48,.59,.67),vUv.y);overcast=mix(overcast,vec3(.075,.12,.19),night);gl_FragColor=vec4(mix(clear,overcast,rain),1.);}',toneMapped:false});
+    const gradient=new THREE.ShaderMaterial({depthWrite:false,depthTest:false,uniforms:{night:{value:0},rain:{value:0},dayTop:{value:new THREE.Color(.57,.75,.84)},dayBottom:{value:new THREE.Color(.85,.89,.77)}},vertexShader:'varying vec2 vUv; void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',fragmentShader:'varying vec2 vUv; uniform float night; uniform float rain; uniform vec3 dayTop; uniform vec3 dayBottom; void main(){vec3 day=mix(dayBottom,dayTop,smoothstep(.12,1.,vUv.y));float sunHaze=exp(-length((vUv-vec2(.36,.83))*vec2(2.,1.))*5.);day=mix(day,vec3(1.,.89,.64),sunHaze*.48);vec3 dark=mix(vec3(.12,.20,.31),vec3(.025,.05,.12),vUv.y);vec3 clear=mix(day,dark,night);vec3 overcast=mix(vec3(.70,.78,.82),vec3(.48,.59,.67),vUv.y);overcast=mix(overcast,vec3(.075,.12,.19),night);gl_FragColor=vec4(mix(clear,overcast,rain),1.);}',toneMapped:false});
     this.background=new THREE.Mesh(new THREE.PlaneGeometry(2,2),gradient);this.background.position.z=-10;this.background.renderOrder=-100;this.scene.add(this.background);
     const glowCanvas=document.createElement('canvas');glowCanvas.width=128;glowCanvas.height=128;const ctx=glowCanvas.getContext('2d'),glow=ctx.createRadialGradient(64,64,0,64,64,64);
     glow.addColorStop(0,'#fff6db66');glow.addColorStop(.3,'#ffedc52b');glow.addColorStop(1,'#ffedc500');ctx.fillStyle=glow;ctx.fillRect(0,0,128,128);const texture=new THREE.CanvasTexture(glowCanvas);
@@ -28,6 +28,11 @@ export class ForestSky {
     }
     const trailGeometry=new THREE.BufferGeometry();trailGeometry.setAttribute('position',new THREE.Float32BufferAttribute([0,0,0,-.22,.07,0,-.4,.13,0],3));trailGeometry.setAttribute('color',new THREE.Float32BufferAttribute([1,.95,.78,.58,.7,.95,.16,.25,.43],3));
     this.meteor=new THREE.Group();const trail=new THREE.Line(trailGeometry,new THREE.LineBasicMaterial({vertexColors:true,transparent:true,depthWrite:false,toneMapped:false}));this.meteor.add(trail);const tip=new THREE.Mesh(new THREE.CircleGeometry(.005,8),new THREE.MeshBasicMaterial({color:0xfff7d8,transparent:true,toneMapped:false}));this.meteor.add(tip);this.meteor.visible=false;this.scene.add(this.meteor);
+  }
+  setPalette(color){
+    const uniforms=this.background.material.uniforms;
+    if(color==null){uniforms.dayTop.value.setRGB(.57,.75,.84);uniforms.dayBottom.value.setRGB(.85,.89,.77);}
+    else{uniforms.dayTop.value.setHex(color).convertLinearToSRGB();uniforms.dayBottom.value.copy(uniforms.dayTop.value).lerp(new THREE.Color(.99,.94,.83),.5);}
   }
   setNight(night){if(night!==this.night)this.nightTime=0;this.night=night;}
   resize(width,height){this.aspect=width/height;this.camera.left=-this.aspect;this.camera.right=this.aspect;this.camera.updateProjectionMatrix();this.background.scale.x=this.aspect;this.stars.scale.x=this.aspect;this.sun.position.x=this.moon.position.x=-this.aspect*.28;}

@@ -33,6 +33,11 @@ export class ForestAudio {
     source.connect(filter);filter.connect(this.rainGain);this.rainGain.connect(this.master);source.start();
   }
   setNight(value){this.night=value;}
+  setDestination(id){
+    this.destination=id;
+    const [frequency,volume]=({beach:[420,.32],city:[220,.07],village:[600,.14],mountains:[470,.28],snowlands:[800,.12]})[id]||[650,.22];
+    if(this.breezeFilter){this.breezeFilter.frequency.setTargetAtTime(frequency,this.ctx.currentTime,.6);this.breezeGain.gain.setTargetAtTime(volume,this.ctx.currentTime,.6);}
+  }
   setPaused(value) { this.paused=value; if(this.ctx && this.enabled) this.master.gain.setTargetAtTime(value?.12:.45,this.ctx.currentTime,.3); }
   tone(frequency, time, duration=.4, gain=.1, type='sine', endFrequency) {
     if (!this.ctx) return;
@@ -49,6 +54,7 @@ export class ForestAudio {
     this.breeze=this.ctx.createBufferSource();this.breeze.buffer=buffer;this.breeze.loop=true;
     const filter=this.ctx.createBiquadFilter();filter.type='lowpass';filter.frequency.value=650;
     const gain=this.ctx.createGain();gain.gain.value=.22;
+    this.breezeFilter=filter;this.breezeGain=gain;this.setDestination(this.destination||'forest');
     this.breeze.connect(filter);filter.connect(gain);gain.connect(this.master);this.breeze.start();
   }
   schedule() {
@@ -73,7 +79,7 @@ export class ForestAudio {
     if(!this.paused){
       if(this.night&&this.note%12===2){for(let i=0;i<4;i++)this.tone(2300+i*60,now+i*.075,.045,.009,'sine',2100);}
       if(this.night&&this.note%89===20){this.tone(290,now,.4,.025,'sine',220);this.tone(250,now+.5,.55,.018,'sine',190);}
-      if(!this.night&&!this.raining&&this.note%29===8)this.bird();
+      if(!this.night&&!this.raining&&!['city','snowlands'].includes(this.destination)&&this.note%29===8)this.bird();
     }
     this.note++;
   }

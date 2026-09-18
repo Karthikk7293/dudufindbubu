@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { ForestWorld } from './world.js';
 import { ForestAudio } from './audio.js';
 import { ForestHaptics } from './haptics.js';
+import { renderDestinations } from './destination-ui.js';
 import { freshAdventure, discoverPlaces, befriend, FRIENDS, placeDestination } from './adventure.js';
 import { AdventureJournal } from './adventure-ui.js';
 import { PostcardCamera } from './postcard.js';
@@ -9,7 +10,7 @@ import { turnBear } from './bear-motion.js';
 import { currentScreen } from './screen-support.js';
 import { icons, giftArt } from './icons.js';
 import { FOLLOW_MIN, FOLLOW_MAX } from './follow-camera.js';
-import { GIFTS, BUBU, START, DUDU_NEST, BUBU_NEST, DESTINATION, MOON_NEST, WORLD_RADIUS, TRAILS, PONDS, SAVE_KEY, freshState, restoreState, collectGift, canCelebrate, shouldRevealBubu, guidanceTarget, moveWithCollisions, findPath, isWalkable } from './game-state.js';
+import { GIFTS, BUBU, START, DUDU_NEST, BUBU_NEST, DESTINATION, MOON_NEST, WORLD_RADIUS, TRAILS, PONDS, SAVE_KEY, freshState, restoreState, collectGift, canCelebrate, shouldRevealBubu, guidanceTarget, isWalkable } from './game-state.js';
 
 const $=id=>document.getElementById(id);
 const show=id=>$(id).classList.remove('hidden'), hide=id=>$(id).classList.add('hidden');
@@ -22,12 +23,13 @@ try{localStorage.removeItem(SAVE_KEY);}catch{/* Storage is optional. */}
 if(import.meta.env.DEV&&window.__DUDU_TEST_STATE__){state=restoreState(JSON.stringify(window.__DUDU_TEST_STATE__));delete window.__DUDU_TEST_STATE__;}
 let weatherMode='clear';try{if(localStorage.getItem('dudu-weather')==='rain')weatherMode='rain';}catch{}
 let timeOfDay='day';try{if(localStorage.getItem('dudu-time-of-day')==='night')timeOfDay='night';}catch{}
+let travelling=false;
 let world, ready=false, playing=false, nearby=null, route=[], toastTimer, speechTimer, speechBear='dudu', lastTime=0, stepTime=0, mapTime=0, wasPaused=false, fullscreenTransition=false;
 let guidedId=null,inspectedGift=null,guideTarget=null,guidePath=[],guideTime=0,guideOrigin=null;
 let joystick={x:0,y:0}, joystickPointer=null;
 const keys=new Set();
 const dialogs=[...document.querySelectorAll('dialog')];
-const isPaused=()=>!!photo?.active||dialogs.some(d=>d.open)||document.hidden||document.documentElement.dataset.rotateRequired==='true';
+const isPaused=()=>travelling||!!photo?.active||dialogs.some(d=>d.open)||document.hidden||document.documentElement.dataset.rotateRequired==='true';
 
 function updateHapticButton(){
   const button=$('pause-haptics');button.hidden=!haptics.touch;button.disabled=!haptics.supported;
@@ -41,6 +43,7 @@ document.addEventListener('click',event=>{if(event.target.closest('button:not(:d
 updateHapticButton();
 const journal=new AdventureJournal(followPlace);
 $('journey-icon').innerHTML=icons.book;
+$('travel-icon').innerHTML=icons.map;
 $('sound-button').innerHTML=icons.muted;$('help-button').innerHTML=icons.help;$('headphone-icon').innerHTML=icons.headphones;
 $('leaf-icon').innerHTML=icons.leaf;$('heart-icon').innerHTML=icons.heart;$('map-icon').innerHTML=icons.map;
 $('play-bag-icon').innerHTML=icons.bag;$('play-map').innerHTML=icons.map;$('play-pause').innerHTML=icons.pause;
@@ -67,24 +70,24 @@ function updateTimeControls(){
 function toggleTime(){
   if(!world||world.story==='moon')return;timeOfDay=timeOfDay==='day'?'night':'day';world.setTimeOfDay(timeOfDay,isPaused());audio.setNight(timeOfDay==='night');updateTimeControls();
   try{localStorage.setItem('dudu-time-of-day',timeOfDay);}catch{}
-  if(playing&&!isPaused())toast(timeOfDay==='night'?'Moonlit paths, little lanterns, and wishes among the stars.':weatherMode==='rain'?'A rainy morning in the woods. ♡':'Hello, sunshine. The butterflies are back. ♡',3800);
+  if(playing&&!isPaused())toast(timeOfDay==='night'?'Moonlit paths, little lanterns, and wishes among the stars.':weatherMode==='rain'?'A soft, cloudy morning. ♡':'Hello, sunshine. A new day to wander. ♡',3800);
 }
 ['intro-time','play-time','pause-time'].forEach(id=>$(id).addEventListener('click',toggleTime));updateTimeControls();
 function updateWeatherControls(){
-  const rainy=weatherMode==='rain',label=rainy?'Clear the sky':'Start gentle rain';
+  const rainy=weatherMode==='rain',snowy=world?.travel?.current.id==='snowlands',label=snowy?(rainy?'Lighter snowfall':'More snowfall'):rainy?'Clear the sky':'Start gentle rain';
   $('app').classList.toggle('rainy',rainy);
   ['intro-weather','play-weather','pause-weather'].forEach(id=>{
     const button=$(id),caption=id==='intro-weather'?(rainy?'Gentle rain':'Clear skies'):label;
-    button.innerHTML=(rainy?icons.rain:icons.cloudSun)+(id==='play-weather'?'':`<span>${caption}</span>`);
+    button.innerHTML=(snowy?icons.snow:rainy?icons.rain:icons.cloudSun)+(id==='play-weather'?'':`<span>${caption}</span>`);
     button.setAttribute('aria-label',label);button.setAttribute('aria-pressed',String(rainy));button.title=`${label} (V)`;
   });
 }
 function toggleWeather(){
   if(!world||!ready)return;
   weatherMode=weatherMode==='clear'?'rain':'clear';world.setWeather(weatherMode,isPaused());
-  audio.setRain(weatherMode==='rain');updateWeatherControls();
+  audio.setRain(weatherMode==='rain'&&world.travel.current.id!=='snowlands');updateWeatherControls();
   try{localStorage.setItem('dudu-weather',weatherMode);}catch{}
-  if(playing&&!isPaused())toast(weatherMode==='rain'?'A little rain, a softer forest. ♡':'The clouds are clearing. ♡');
+  if(playing&&!isPaused())toast(world.travel.current.id==='snowlands'?(weatherMode==='rain'?'A few more snowflakes, a little more magic. ♡':'Soft snow, quiet footsteps. ♡'):weatherMode==='rain'?'A little rain, a softer world. ♡':'The clouds are clearing. ♡');
 }
 ['intro-weather','play-weather','pause-weather'].forEach(id=>$(id).addEventListener('click',toggleWeather));updateWeatherControls();
 
@@ -101,7 +104,38 @@ dialogs.forEach(dialog=>{
   dialog.addEventListener('click',event=>{if(event.target===dialog && dialog.id!=='ending-dialog'){const r=dialog.getBoundingClientRect();if(event.clientX<r.left||event.clientX>r.right||event.clientY<r.top||event.clientY>r.bottom)closeDialog(dialog);}});
 });
 $('help-button').addEventListener('click',()=>openDialog('help-dialog'));
-function openMap(){$('map-journal').hidden=!playing;drawMap($('large-map'),true);openDialog('map-dialog');}
+function openMap(){
+  $('map-journal').hidden=!playing||world.away;
+  $('map-title').textContent=world.travel.current.name;
+  $('map-description').textContent=world.away?world.travel.current.detail:'Eight surprises, two little homes, and a Moonwatch nest above the trees.';
+  $('large-map').setAttribute('aria-label',`${world.travel.current.name} map with Dudu and marked places`);
+  $('map-legend').innerHTML=world.away?'<span><i class="map-dot"></i> Dudu</span><span><i class="map-dot gift-dot"></i> A memory</span>':'<span><i class="map-dot"></i> Dudu</span><span><i class="map-dot gift-dot"></i> A surprise</span><span><i class="map-dot bubu-dot"></i> Bubu’s picnic</span>';
+  drawMap($('large-map'),true);openDialog('map-dialog');
+}
+function openTravel(){
+  if(!ready||travelling)return;
+  renderDestinations(world.travel,playing&&state.departed&&!world.cinematic);openDialog('travel-dialog');
+}
+async function travelTo(id){
+  if(travelling||!playing||world.cinematic||!state.departed||id===world.travel.current.id)return;
+  closePhoto();clearInputs();dialogs.filter(d=>d.open).forEach(d=>d.close());
+  travelling=true;haptics.stop();audio.setPaused(true);$('travel-loading').hidden=false;$('travel-loading-title').textContent='A new horizon…';
+  hide('speech');hide('toast');hide('interact-button');hide('discovery-notice');discoveryQueue=[];discoveryRemaining=0;
+  try{
+    await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+    if(!await world.travel.visit(id))return;
+    exploreTarget=null;guidedId=null;guideTarget=null;guideOrigin=null;nearby=null;
+    $('current-destination').textContent=world.travel.current.name;
+    $('journal-away').hidden=!world.away;
+    audio.setDestination(world.travel.current.id);audio.setRain(weatherMode==='rain'&&world.travel.current.id!=='snowlands');updateWeatherControls();
+    world.update(0,false,false,true);updateUI();
+    toast(world.away?`${world.travel.current.name} · Three little memories to find.`:'Back to Sunnywood. Your birthday adventure is right where you left it.',5000);
+  }catch(error){console.error('Destination could not load',error);toast('That journey could not load. Your adventure is safe here; please try again.',6500);}
+  finally{travelling=false;$('travel-loading').hidden=true;audio.setPaused(isPaused());world.needsRender=true;lastTime=performance.now();$('world').focus({preventScroll:true});}
+}
+['travel-button','pause-travel','map-travel','journal-travel'].forEach(id=>$(id).addEventListener('click',openTravel));
+$('travel-cards').addEventListener('click',event=>{const button=event.target.closest('[data-destination]');if(button&&!button.disabled)travelTo(button.dataset.destination);});
+$('journal-return').addEventListener('click',()=>travelTo('forest'));
 $('map-button').addEventListener('click',openMap);$('play-map').addEventListener('click',openMap);
 $('play-bag').addEventListener('click',()=>openJournal('gifts'));$('play-pause').addEventListener('click',()=>openDialog('pause-dialog'));
 $('journey-status').addEventListener('click',()=>openJournal());
@@ -151,13 +185,15 @@ function updateZoomUI(){
   if(!world)return;const follow=world.cameraMode==='third-person';
   $('zoom-in').disabled=!world.overview&&(follow?world.follow.distance<=FOLLOW_MIN:world.zoomView<=14);
   $('zoom-out').disabled=!world.overview&&(follow?world.follow.distance>=FOLLOW_MAX:world.zoomView>=108);
-  $('zoom-overview').setAttribute('aria-pressed',String(world.overview));$('zoom-overview').setAttribute('aria-label',world.overview?'Follow Dudu':'See whole forest');
+  $('zoom-overview').setAttribute('aria-pressed',String(world.overview));$('zoom-overview').setAttribute('aria-label',world.overview?'Follow Dudu':'See whole area');
   $('camera-mode').setAttribute('aria-pressed',String(follow&&!world.overview));$('camera-mode').setAttribute('aria-label',follow?'Switch to overhead view':'Switch to third-person view');
-  const label=world.overview?'Whole forest':follow?'Third person':'Overhead view';
+  const label=world.overview?'Whole area':follow?'Third person':'Overhead view';
   if($('camera-mode').dataset.view!==label){$('camera-mode').innerHTML=`${icons.camera}<span>${label}</span>`;$('camera-mode').dataset.view=label;}
   $('camera-recenter').disabled=world.cinematic;
   ['pause-photo','journal-photo'].forEach(id=>{$(id).disabled=!photo?.available;$(id).title=photo?.available?'Make a postcard (X)':'Available after this little scene';});
-  if($('bag-dialog').open)document.querySelectorAll('[data-place]').forEach(button=>button.disabled=world.cinematic||(button.dataset.place==='moonwatch'&&!state.completed));
+  $('travel-button').disabled=world.cinematic||travelling;
+  $('track-gift').disabled=world.away;
+  if($('bag-dialog').open)document.querySelectorAll('[data-place]').forEach(button=>button.disabled=world.away||world.cinematic||(button.dataset.place==='moonwatch'&&!state.completed));
 }
 function zoom(factor){if(!world||world.cinematic)return;world.zoomBy(factor);updateZoomUI();}
 function overview(){if(!world||world.cinematic)return;world.toggleOverview();updateZoomUI();}
@@ -170,7 +206,7 @@ function inspectGift(gift){
   $('track-gift').classList.toggle('hidden',found);$('track-gift').textContent=`Follow ${gift.short.toLowerCase()}’s trail ↗`;
 }
 document.querySelectorAll('.bag-slot').forEach(slot=>slot.addEventListener('click',()=>inspectGift(GIFTS.find(g=>g.id===slot.dataset.gift))));
-$('track-gift').addEventListener('click',()=>{exploreTarget=null;guidedId=inspectedGift;guideOrigin=null;closeDialog($('bag-dialog'));updateGuidance(0);toast(`Follow the glowing trail to ${guideTarget.short.toLowerCase()}. Tap its pointer to walk there.`,5000);});
+$('track-gift').addEventListener('click',()=>{if(world.away)return;exploreTarget=null;guidedId=inspectedGift;guideOrigin=null;closeDialog($('bag-dialog'));updateGuidance(0);toast(`Follow the glowing trail to ${guideTarget.short.toLowerCase()}. Tap its pointer to walk there.`,5000);});
 $('hint-button').addEventListener('click',()=>{
   if(state.completed){$('bag-hint').textContent='One more little adventure: follow the moon pointer to the tall Moonwatch tree, then climb to the nest together. ♡';return;}
   const next=GIFTS.filter(g=>!state.collected.includes(g.id)).sort((a,b)=>Math.hypot(state.position.x-a.x,state.position.z-a.z)-Math.hypot(state.position.x-b.x,state.position.z-b.z))[0];
@@ -180,25 +216,27 @@ $('hint-button').addEventListener('click',()=>{
 function updateGuidance(dt){
   const visible=playing&&!world.cinematic&&!isPaused();
   $('journey-status').classList.toggle('hidden',!visible);
+  $('travel-button').classList.toggle('hidden',!visible);
   $('walk-status').classList.toggle('hidden',!visible||(!route.length&&!exploreTarget));
   $('stop-walking').hidden=!route.length;$('return-birthday').hidden=!exploreTarget;
   ['guide-button','gift-pointer'].forEach(id=>$(id).classList.toggle('hidden',!visible));world.guidance.visible=visible;
   if(!visible)return;
-  const next=exploreTarget||guidanceTarget(state,guidedId);guideTime-=dt;
+  const next=world.away?world.travel.target():exploreTarget||guidanceTarget(state,guidedId);guideTime-=dt;
   const changed=next.id!==guideTarget?.id||next.x!==guideTarget?.x||next.z!==guideTarget?.z;guideTarget=next;if(!next.place)guidedId=next.id;
   if(changed||!guideOrigin||(guideTime<=0&&Math.hypot(state.position.x-guideOrigin.x,state.position.z-guideOrigin.z)>1.5)){
-    guidePath=findPath(state.position,guideTarget,world.obstacles);world.showGuidance(guidePath);guideTime=.6;guideOrigin={...state.position};
+    guidePath=world.findPath(state.position,guideTarget);world.showGuidance(guidePath);guideTime=.6;guideOrigin={...state.position};
     $('guide-name').textContent=guideTarget.short;$('guide-art').innerHTML=giftArt[guideTarget.id]||icons[guideTarget.icon]||(guideTarget.id==='moon-nest'?icons.moon:icons.heart);
     document.querySelectorAll('.bag-slot').forEach(slot=>slot.classList.toggle('tracked',slot.dataset.gift===guidedId));
   }
   const distance=Math.hypot(state.position.x-next.x,state.position.z-next.z),near=distance<(next.id==='bubu'?3.2:next.id==='moon-nest'?2.6:2.5);
-  const action=next.id==='moon-nest'||next.id==='moonwatch'?'Climb together':next.place?'Explore':next.id==='bubu'?(state.completed?'Say hello':'Celebrate'):'Collect';
+  const action=next.memory?'Remember':next.onward?'Travel':next.id==='moon-nest'||next.id==='moonwatch'?'Climb together':next.place?'Explore':next.id==='bubu'?(state.completed?'Say hello':'Celebrate'):'Collect';
   $('guide-detail').textContent=route.length?'Walking · Tap to stop':near?`${action} ♡`:`${Math.ceil(distance)} m · Tap to follow`;
   $('guide-button').setAttribute('aria-label',route.length?'Stop walking':`${near?action:'Follow the trail to'} ${next.short}`);
   $('gift-pointer').setAttribute('aria-label',route.length?'Stop walking':`${near?action:'Walk to'} ${next.short}`);
-  const p=world.projectLocation(next.x,2.7,next.z),{x,y}=p;
+  const p=world.projectLocation(next.x,(world.away?world.travel.active.height(next.x,next.z):0)+2.7,next.z),{x,y}=p;
   const compact=currentScreen().compact;
-  const px=Math.max(95,Math.min(world.width-95,x)),py=Math.max(compact?125:150,Math.min(world.height-(compact?120:world.mobile?220:130),y));
+  const px=Math.max(95,Math.min(world.width-95,x));let py=Math.max(compact?125:150,Math.min(world.height-(compact?120:world.mobile?220:130),y));
+  if(px<230&&py<(compact?180:230))py=compact?180:230;
   const offscreen=!p.front||Math.abs(px-x)>1||Math.abs(py-y)>1,arrow=$('gift-pointer').querySelector('.pointer-arrow');
   $('gift-pointer').classList.toggle('offscreen',offscreen);$('gift-pointer').style.left=`${px}px`;$('gift-pointer').style.top=`${py}px`;
   $('pointer-name').textContent=offscreen?`${next.short} · ${Math.ceil(distance)} m`:next.short;
@@ -207,13 +245,14 @@ function updateGuidance(dt){
 }
 function stopWalking(){route=[];keys.clear();resetJoystick();if(world)world.clickMarker.visible=false;}
 function setWalkRoute(target){
-  stopWalking();route=findPath(state.position,target,world.obstacles);
+  stopWalking();route=world.findPath(state.position,target);
   if(route.length)world.mark(target);else toast('That spot is behind the scenery. Try a nearby path.');
   $('world').focus({preventScroll:true});
 }
 function followGuidance(){
   if(!guideTarget||world.cinematic||isPaused())return;
   if(route.length){stopWalking();return;}
+  if(guideTarget.onward){openTravel();return;}
   const distance=Math.hypot(state.position.x-guideTarget.x,state.position.z-guideTarget.z);
   if(distance<(guideTarget.id==='bubu'?3.2:guideTarget.id==='moon-nest'||guideTarget.id==='moonwatch'?2.6:2.5)){
     if(guideTarget.place&&guideTarget.id!=='moonwatch'){openJournal('places');return;}
@@ -223,11 +262,11 @@ function followGuidance(){
 }
 function openJournal(tab){if(tab)journal.select(tab);journal.render(state,adventure);openDialog('bag-dialog');}
 function followPlace(place){
-  if(!place||!playing||world.cinematic||(place.afterBirthday&&!state.completed))return;
+  if(!place||!playing||world.away||world.cinematic||(place.afterBirthday&&!state.completed))return;
   exploreTarget=placeDestination(place);guideOrigin=null;closeDialog($('bag-dialog'));updateGuidance(0);setWalkRoute(exploreTarget);
 }
 function updateDiscoveries(dt){
-  const discoveries=discoverPlaces(adventure,state,world.dudu.position);
+  const discoveries=world.away?[]:discoverPlaces(adventure,state,world.dudu.position);
   if(discoveries.length){discoveryQueue.push(...discoveries);journal.render(state,adventure);}
   if(exploreTarget&&exploreTarget.id!=='moonwatch'&&Math.hypot(state.position.x-exploreTarget.x,state.position.z-exploreTarget.z)<1){
     stopWalking();exploreTarget=null;guideOrigin=null;
@@ -244,6 +283,7 @@ function openPhoto(){
   // Finish a stationary frame once, then the photo camera owns rendering.
   world.update(0,false,false,true);world.guidance.visible=false;world.clickMarker.visible=false;
   if(!photo.open())return;
+  $('photo-location').textContent=`POSTCARDS FROM ${world.travel.current.name.toUpperCase()}`;
   photoSession++;$('photo-save').disabled=false;$('photo-status').textContent='';
   $('app').classList.add('photo-mode');show('photo-ui');audio.setPaused(true);wasPaused=true;
   $('photo-exit').focus({preventScroll:true});
@@ -259,7 +299,7 @@ async function savePostcard(){
     const blob=await photo.capture($('photo-message').value);
     if(session!==photoSession)return;
     const url=URL.createObjectURL(blob),link=document.createElement('a');
-    link.href=url;link.download=`sunnywood-postcard-${adventure.postcards+1}.png`;document.body.append(link);link.click();link.remove();
+    link.href=url;link.download=`${world.travel.current.id}-postcard-${adventure.postcards+1}.png`;document.body.append(link);link.click();link.remove();
     setTimeout(()=>URL.revokeObjectURL(url),60000);adventure.postcards++;journal.render(state,adventure);
     $('photo-status').textContent='Postcard ready. Check your downloads. ♡';
   }catch(error){if(session===photoSession)$('photo-status').textContent=error.message||'Please try making the postcard again.';}
@@ -302,6 +342,12 @@ $('start-button').addEventListener('click',start);
 
 function checkNearby(){
   if(!playing||isPaused())return;
+  if(world.away){
+    const memory=world.travel.nearby();nearby=memory?{id:'destination-memory',memory}:state.completed&&Math.hypot(state.position.x-world.bubu.position.x,state.position.z-world.bubu.position.z)<3.2?{id:'bubu'}:null;
+    $('interact-button').classList.toggle('hidden',!nearby);
+    if(nearby)$('interact-label').textContent=memory?`Remember ${memory.name.toLowerCase()}`:'Share a little moment';
+    $('touch-interact').setAttribute('aria-label',nearby?$('interact-label').textContent:'Explore a nearby landmark');return;
+  }
   if(world.story==='moon'){
     const watching=world.moonJourney.phase==='stargazing';
     $('interact-button').classList.toggle('hidden',!watching);$('interact-label').textContent='Climb down together';return;
@@ -320,6 +366,12 @@ function interact(){
   if(world.story==='moon'){if(world.moonJourney.descend()){haptics.pulse('tap');hide('interact-button');keys.clear();}return;}
   if(world.cinematic)return;
   checkNearby();if(!nearby){toast('Wander close to a gift, a forest friend, or Bubu, then say hello.',3000);return;}
+  if(nearby.id==='destination-memory'){
+    stopWalking();const item=nearby.memory,first=world.travel.remember(item);
+    world.dudu.userData.expression.react('delighted',2.5);world.reactions.emit(world.dudu.position,world.reducedMotion);
+    if(first){haptics.pulse('discovery');audio.collect();discoveryQueue.push({name:item.name,icon:world.travel.current.icon});guideOrigin=null;}
+    speak(`“${item.memory}”`);toast(first?`A little memory from ${world.travel.current.name} tucked into the journal. ♡`:item.memory,5500);return;
+  }
   if(nearby.id==='moon-nest'){
     if(world.startMoonVisit()){haptics.pulse('tap');route=[];keys.clear();resetJoystick();hide('speech');hide('toast');hide('interact-button');}
     else toast('Let’s take a step closer to the ladder together.');
@@ -352,11 +404,11 @@ function interact(){
 $('interact-button').addEventListener('click',interact);$('touch-interact').addEventListener('click',interact);
 $('stay-button').addEventListener('click',()=>{closeDialog($('ending-dialog'));toast('Follow the moon pointer to the big Moonwatch tree. There’s a nest under the stars for two. ♡',6500);});
 function restart(){
-  haptics.stop();closePhoto();clearInputs();adventure=freshAdventure();exploreTarget=null;discoveryQueue=[];discoveryRemaining=0;hide('discovery-notice');journal.select('gifts');$('photo-message').value='A little journey. A lot of love.';
+  haptics.stop();closePhoto();world.travel.reset();$('current-destination').textContent=world.travel.current.name;$('journal-away').hidden=true;audio.setDestination('forest');audio.setRain(weatherMode==='rain');updateWeatherControls();clearInputs();adventure=freshAdventure();exploreTarget=null;discoveryQueue=[];discoveryRemaining=0;hide('discovery-notice');journal.select('gifts');$('photo-message').value='A little journey. A lot of love.';
   hide('moon-caption');$('app').classList.remove('moon-visit');['intro-time','play-time','pause-time'].forEach(id=>$(id).disabled=false);
   dialogs.filter(d=>d.open).forEach(closeDialog);audio.party=false;state=freshState();world.state=state;world.dudu.rotation.y=0;world.bubu.rotation.y=.35;
   world.gifts.forEach(g=>{g.group.visible=true;g.ring.visible=true;g.sparkle.visible=true;});
-  world.picnicCake.visible=false;world.confetti.forEach(h=>{world.scene.remove(h);h.material.dispose();});world.confetti=[];
+  world.picnicCake.visible=false;world.confetti.forEach(h=>{h.removeFromParent();h.material.dispose();});world.confetti=[];
   world.addBackpackGifts();route=[];nearby=null;guidedId=null;guideTarget=null;guideOrigin=null;inspectedGift=null;hide('track-gift');hide('party-caption');hide('speech');hide('interact-button');hide('toast');updateUI();world.resetStory();updateZoomUI();world.setCamera(true);
 }
 $('restart-button').addEventListener('click',restart);$('play-again-button').addEventListener('click',restart);
@@ -380,6 +432,7 @@ window.addEventListener('keydown',event=>{
   if(event.repeat)return;
   if(k==='e'||k===' '){event.preventDefault();interact();}
   if(k==='m'){event.preventDefault();openMap();}
+  if(k==='g'){event.preventDefault();openTravel();}
   if(k==='b'){event.preventDefault();openJournal('gifts');}
   if(k==='x'){event.preventDefault();openPhoto();}
   if(k==='+'||k==='='){event.preventDefault();zoom(1/1.25);}
@@ -399,7 +452,7 @@ document.addEventListener('visibilitychange',()=>{audio.setPaused(isPaused());if
 function walkTo(clientX,clientY){
   if(!playing||isPaused()||world.cinematic)return;
   const point=world.groundPoint(clientX,clientY);if(!point)return;
-  const path=findPath(state.position,point,world.obstacles);
+  const path=world.findPath(state.position,point);
   if(path.length){haptics.pulse('tap');route=path;world.mark(point);$('world').focus({preventScroll:true});}
   else toast('That spot is behind the scenery. Try a nearby path.');
 }
@@ -447,6 +500,7 @@ updateScreen();
 
 function drawMap(canvas,large=false){
   const ctx=canvas.getContext('2d'),w=canvas.width,h=canvas.height;ctx.clearRect(0,0,w,h);
+  if(world?.away){world.travel.drawMap(ctx,w,h);return;}
   const scale=Math.min(w,h)/88,cx=w/2,cy=h/2;
   const point=(x,z)=>[cx+x*scale,cy+z*scale];
   ctx.fillStyle='#e7ead3';ctx.beginPath();ctx.ellipse(cx,cy,40*scale,40*scale,0,0,Math.PI*2);ctx.fill();
@@ -477,6 +531,7 @@ function drawMap(canvas,large=false){
 function animate(time){
   const dt=Math.min((time-lastTime)/1000,.25);lastTime=time;let moving=false,running=false;
   const paused=isPaused();
+  if(travelling){requestAnimationFrame(animate);return;}
   if(playing&&!paused&&!world.cinematic){
     world.orbitCamera((Number(keys.has('l'))-Number(keys.has('j')))*dt*170,(Number(keys.has('k'))-Number(keys.has('i')))*dt*100);
     let sx=Number(keys.has('d')||keys.has('arrowright'))-Number(keys.has('a')||keys.has('arrowleft'))+joystick.x;
@@ -494,14 +549,14 @@ function animate(time){
     if(dx||dz){
       const oldX=state.position.x,oldZ=state.position.z;
       const travel=route.length?Math.min(speed*dt,Math.hypot(route[0].x-state.position.x,route[0].z-state.position.z)):speed*dt;
-      moveWithCollisions(state.position,dx*travel,dz*travel,world.obstacles);
+      world.move(state.position,dx*travel,dz*travel);
       moving=Math.hypot(state.position.x-oldX,state.position.z-oldZ)>.001;
       if(!moving&&route.length){stopWalking();toast('A tree is in the way. Tap the trail to find another route.');}
       turnBear(world.dudu,Math.atan2(dx,dz),dt);
       stepTime+=dt;if(moving&&stepTime>(running?.23:.34)){audio.footstep(running);stepTime=0;}
     }
     checkNearby();
-    if(shouldRevealBubu(state)){route=[];keys.clear();hide('interact-button');world.revealBubu();}
+    if(!world.away&&shouldRevealBubu(state)){route=[];keys.clear();hide('interact-button');world.revealBubu();}
   }
   if(!photo?.active&&(!paused||!wasPaused||world.needsRender)){world.update(paused?0:dt,moving,running,paused);world.needsRender=false;}
   if(photo?.active&&!document.hidden)photo.render();
@@ -553,5 +608,5 @@ export async function initialize(progress){
   await world.warmUp(progress);
   ready=true;$('start-button').disabled=false;lastTime=performance.now();requestAnimationFrame(animate);
   // Read-only state for browser diagnostics, with ordinary input driving tests.
-  if(import.meta.env.DEV)window.__dudu={snapshot:()=>JSON.parse(JSON.stringify({state,adventure,photo:{active:photo.active,perspective:!!photo.camera?.isPerspectiveCamera,position:photo.camera?.position,target:photo.controls?.target},ready,playing,paused:isPaused(),camera:{mode:world.cameraMode,perspective:!!world.camera.isPerspectiveCamera,position:world.camera.position,target:world.story==='moon'?world.moonLook:world.thirdPerson?world.follow.target:world.cameraTarget,yaw:world.movementYaw,pitch:world.follow.pitch,fov:world.camera.fov,distance:world.follow.distance,arm:world.follow.arm,avoidYaw:world.follow.avoidYaw,avoidPitch:world.follow.avoidPitch},nearby:nearby?.id,position:state.position,obstacles:world.obstacles,sound:audio.enabled,route:route.length,render:world.renderer.info.render,quality:world.quality,environment:{tufts:world.meadow.tufts,grassCells:world.meadow.cells.length,grassTime:world.meadow.uniforms.time.value,breeze:world.meadow.uniforms.breeze.value,ferns:world.understory.count,sunbeams:world.sunlight.group.visible,fogNear:world.scene.fog.near,fogFar:world.scene.fog.far},time:world.time,view:world.viewSize,zoom:world.cameraMode==='third-person'?world.follow.distance:world.zoomView,overview:world.overview,story:world.story,bubuVisible:world.bubu.visible,bubuPosition:world.bubu.position,duduPosition:world.dudu.position,animals:world.animals.map(a=>({kind:a.kind,x:a.group.position.x,z:a.group.position.z,action:a.brain.mode,model:a.blenderSheep?'blender':'procedural',clip:a.blenderSheep?.clip,blink:a.blenderSheep?.blink,distance:a.brain.distance})),balloons:world.balloons.length,worldRadius:WORLD_RADIUS,timeOfDay:world.timeOfDay,nightBlend:world.nightBlend,trees:world.treeKinds,treeSizes:world.treeSizes,bearScale:world.dudu.scale.x,characterModel:world.dudu.userData.blenderDudu?{source:'blender',weights:world.dudu.userData.blenderDudu.weights,bones:world.dudu.userData.blenderDudu.asset.bones.size}:null,moonJourney:world.moonJourney?{phase:world.moonJourney.phase,progress:world.moonJourney.progress}:null,flowerBeds:world.flowerBeds,butterflies:world.butterflies.map(b=>b.kind),lamps:{count:world.roadLighting.sites.length,sites:world.roadLighting.sites,glowing:world.roadLighting.glass.emissiveIntensity,lights:world.roadLighting.lights.map(l=>l.intensity)},guidance:guideTarget?{id:guideTarget.id,path:guidePath}:null,following:!!world.companion,expressions:[world.dudu,world.bubu].map(b=>({name:b.name,mood:b.userData.expression.mood,reaction:b.userData.expression.reaction,remaining:b.userData.expression.remaining,values:b.userData.expression.values,stride:b.userData.strideWeight,run:b.userData.runWeight})),partyTime:world.storyTime,candleLit:world.candleFlame.visible,haptics:{supported:haptics.supported,enabled:haptics.enabled},umbrellas:[world.dudu,world.bubu].map(b=>({bear:b.name,visible:b.visible&&b.userData.umbrella.active,position:b.userData.umbrella.group.position,grip:b.userData.forearms[b.userData.umbrella.hand].rotation})),weather:{mode:world.weather.mode,blend:world.weather.blend,time:world.weather.time,rain:world.rain.streaks.visible?world.rain.drops.length:0,puddles:world.rain.puddles.visible?world.rain.sites.length:0,ripples:world.rain.ripples.visible?world.rain.rippleSites.length:0,audioRain:!!audio.raining,snowVisible:world.atmosphere.snow.visible,snow:world.atmosphere.flakes.length,birds:world.atmosphere.birds.map(b=>({x:b.group.position.x,y:b.group.position.y,z:b.group.position.z})),windLeaves:world.atmosphere.leaves.count,sun:world.sky.sun.visible,moon:world.sky.moon.visible,clouds:world.sky.clouds.length,stars:world.sky.stars.geometry.attributes.position.count,shootingStar:world.sky.meteor.visible,nightTime:world.sky.nightTime,fireflies:world.atmosphere.fireflies.visible?world.atmosphere.fireflyData.length:0,petals:world.atmosphere.petals.count}})),project:(x,z,y=0)=>{const point=new THREE.Vector3(x,y,z).project(world.camera),rect=$('world').getBoundingClientRect();return{x:rect.left+(point.x*.5+.5)*rect.width,y:rect.top+(-point.y*.5+.5)*rect.height};}};
+  if(import.meta.env.DEV)window.__dudu={snapshot:()=>JSON.parse(JSON.stringify({state,adventure,destination:world.travel.snapshot(),travelling,photo:{active:photo.active,perspective:!!photo.camera?.isPerspectiveCamera,position:photo.camera?.position,target:photo.controls?.target},ready,playing,paused:isPaused(),camera:{mode:world.cameraMode,perspective:!!world.camera.isPerspectiveCamera,position:world.camera.position,target:world.story==='moon'?world.moonLook:world.thirdPerson?world.follow.target:world.cameraTarget,yaw:world.movementYaw,pitch:world.follow.pitch,fov:world.camera.fov,distance:world.follow.distance,arm:world.follow.arm,avoidYaw:world.follow.avoidYaw,avoidPitch:world.follow.avoidPitch},nearby:nearby?.id,position:state.position,obstacles:world.obstacles,sound:audio.enabled,route:route.length,render:world.renderer.info.render,resources:world.renderer.info.memory,quality:world.quality,environment:{tufts:world.meadow.tufts,grassCells:world.meadow.cells.length,grassTime:world.meadow.uniforms.time.value,breeze:world.meadow.uniforms.breeze.value,ferns:world.understory.count,sunbeams:world.sunlight.group.visible,fogNear:world.scene.fog.near,fogFar:world.scene.fog.far},time:world.time,view:world.viewSize,zoom:world.cameraMode==='third-person'?world.follow.distance:world.zoomView,overview:world.overview,story:world.story,bubuVisible:world.bubu.visible,bubuPosition:world.bubu.position,duduPosition:world.dudu.position,animals:world.animals.map(a=>({kind:a.kind,x:a.group.position.x,z:a.group.position.z,action:a.brain.mode,model:a.blenderSheep?'blender':'procedural',clip:a.blenderSheep?.clip,blink:a.blenderSheep?.blink,distance:a.brain.distance})),balloons:world.balloons.length,worldRadius:WORLD_RADIUS,timeOfDay:world.timeOfDay,nightBlend:world.nightBlend,trees:world.treeKinds,treeSizes:world.treeSizes,bearScale:world.dudu.scale.x,characterModel:world.dudu.userData.blenderDudu?{source:'blender',weights:world.dudu.userData.blenderDudu.weights,bones:world.dudu.userData.blenderDudu.asset.bones.size}:null,moonJourney:world.moonJourney?{phase:world.moonJourney.phase,progress:world.moonJourney.progress}:null,flowerBeds:world.flowerBeds,butterflies:world.butterflies.map(b=>b.kind),lamps:{count:world.roadLighting.sites.length,sites:world.roadLighting.sites,glowing:world.roadLighting.glass.emissiveIntensity,lights:world.roadLighting.lights.map(l=>l.intensity)},guidance:guideTarget?{id:guideTarget.id,path:guidePath}:null,following:!!world.companion,expressions:[world.dudu,world.bubu].map(b=>({name:b.name,mood:b.userData.expression.mood,reaction:b.userData.expression.reaction,remaining:b.userData.expression.remaining,values:b.userData.expression.values,stride:b.userData.strideWeight,run:b.userData.runWeight})),partyTime:world.storyTime,candleLit:world.candleFlame.visible,haptics:{supported:haptics.supported,enabled:haptics.enabled},umbrellas:[world.dudu,world.bubu].map(b=>({bear:b.name,visible:b.visible&&b.userData.umbrella.active,position:b.userData.umbrella.group.position,grip:b.userData.forearms[b.userData.umbrella.hand].rotation})),weather:{mode:world.weather.mode,blend:world.weather.blend,time:world.weather.time,rain:world.rain.streaks.visible?world.rain.drops.length:0,puddles:world.rain.puddles.visible?world.rain.sites.length:0,ripples:world.rain.ripples.visible?world.rain.rippleSites.length:0,audioRain:!!audio.raining,snowVisible:world.atmosphere.snow.visible,snow:world.atmosphere.flakes.length,birds:world.atmosphere.birds.map(b=>({x:b.group.position.x,y:b.group.position.y,z:b.group.position.z})),windLeaves:world.atmosphere.leaves.count,sun:world.sky.sun.visible,moon:world.sky.moon.visible,clouds:world.sky.clouds.length,stars:world.sky.stars.geometry.attributes.position.count,shootingStar:world.sky.meteor.visible,nightTime:world.sky.nightTime,fireflies:world.atmosphere.fireflies.visible?world.atmosphere.fireflyData.length:0,petals:world.atmosphere.petals.count}})),project:(x,z,y=0)=>{const point=new THREE.Vector3(x,y,z).project(world.camera),rect=$('world').getBoundingClientRect();return{x:rect.left+(point.x*.5+.5)*rect.width,y:rect.top+(-point.y*.5+.5)*rect.height};}};
 }

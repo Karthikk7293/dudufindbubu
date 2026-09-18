@@ -16,10 +16,11 @@ import { ForestReactions } from './forest-reactions.js';
 import { BearUmbrella, umbrellaAllowed } from './bear-umbrella.js';
 import { RoadLighting } from './road-lighting.js';
 import { FollowCamera } from './follow-camera.js';
+import { DestinationTravel } from './destination-travel.js';
 import { buildMoonNest } from './moon-nest.js';
 import { MoonJourney } from './moon-journey.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { GIFTS, BUBU, START, DUDU_NEST, BUBU_NEST, MOON_NEST, WORLD_RADIUS, TRAILS, PONDS, clampZoom, isWalkable, shouldRevealBubu, canCelebrate } from './game-state.js';
+import { GIFTS, BUBU, START, DUDU_NEST, BUBU_NEST, MOON_NEST, WORLD_RADIUS, TRAILS, PONDS, clampZoom, isWalkable, findPath, moveWithCollisions, shouldRevealBubu, canCelebrate } from './game-state.js';
 
 const COLORS={grass:0x81984e,edge:0x657f46,path:0xcbb78e,trunk:0x806443,leaf:0x62894b,darkLeaf:0x426b49,lightLeaf:0x89a751,pink:0xdab1b0,cream:0xfff5dc,water:0x71a7a0};
 const materials=new Map();
@@ -243,7 +244,12 @@ export class ForestWorld {
     this.cameraTarget=new THREE.Vector3();this.viewSize=48;this.resize();
     this.resizeObserver=new ResizeObserver(()=>this.resize());this.resizeObserver.observe(this.container);
     this.setCamera(true);
+    this.travel=new DestinationTravel(this);
   }
+  get away(){return !!this.travel?.away;}
+  walkable(x,z){return isWalkable(x,z,this.obstacles,this.navigation);}
+  findPath(start,goal){return findPath(start,goal,this.obstacles,this.navigation);}
+  move(position,dx,dz){return moveWithCollisions(position,dx,dz,this.obstacles,this.navigation);}
   async warmUp(progress){
     await progress(88,'Adding the last little rays of sunshine…');
     this.updateLighting(0);
@@ -694,7 +700,7 @@ export class ForestWorld {
   showGuidance(path){
     const dummy=new THREE.Object3D();dummy.rotation.x=-Math.PI/2;
     this.guidance.count=Math.min(path.length,160);
-    path.slice(0,160).forEach((point,i)=>{const onBridge=PONDS.some(p=>Math.abs(point.z-p.z)<1&&Math.abs(point.x-p.x)<5.6);dummy.position.set(point.x,onBridge?.6:.27,point.z);dummy.updateMatrix();this.guidance.setMatrixAt(i,dummy.matrix);});this.guidance.instanceMatrix.needsUpdate=true;
+    path.slice(0,160).forEach((point,i)=>{const onBridge=PONDS.some(p=>Math.abs(point.z-p.z)<1&&Math.abs(point.x-p.x)<5.6);dummy.position.set(point.x,this.away?this.travel.active.height(point.x,point.z)+.075:onBridge?.6:.27,point.z);dummy.updateMatrix();this.guidance.setMatrixAt(i,dummy.matrix);});this.guidance.instanceMatrix.needsUpdate=true;
   }
   projectLocation(x,y,z){
     const point=new THREE.Vector3(x,y,z),local=point.clone().applyMatrix4(this.camera.matrixWorldInverse),front=local.z<0;
@@ -705,9 +711,11 @@ export class ForestWorld {
   screenPosition(object, offset=0) {return this.projectLocation(object.position.x,object.position.y+offset,object.position.z);}
   groundPoint(clientX,clientY){
     const rect=this.container.getBoundingClientRect();this.pointer.set((clientX-rect.left)/rect.width*2-1,-((clientY-rect.top)/rect.height)*2+1);
-    this.raycaster.setFromCamera(this.pointer,this.camera);if(this.raycaster.ray.direction.y>=-.015)return null;const hit=new THREE.Vector3();return this.raycaster.ray.intersectPlane(this.groundPlane,hit)?{x:hit.x,z:hit.z}:null;
+    this.raycaster.setFromCamera(this.pointer,this.camera);if(this.raycaster.ray.direction.y>=-.015)return null;
+    if(this.away){const hit=this.raycaster.intersectObject(this.travel.active.ground)[0];return hit?{x:hit.point.x,z:hit.point.z}:null;}
+    const hit=new THREE.Vector3();return this.raycaster.ray.intersectPlane(this.groundPlane,hit)?{x:hit.x,z:hit.z}:null;
   }
-  mark(point){this.clickMarker.position.set(point.x,.3,point.z);this.clickMarker.visible=true;this.markerTime=this.time;}
+  mark(point){this.clickMarker.position.set(point.x,this.away?this.travel.active.height(point.x,point.z)+.1:.3,point.z);this.clickMarker.visible=true;this.markerTime=this.away?this.travel.time:this.time;}
   resize(){this.width=Math.max(1,this.container.clientWidth);this.height=Math.max(1,this.container.clientHeight);this.mobile=currentScreen().phone||this.width<760;this.renderer.setSize(this.width,this.height);this.sky.resize(this.width,this.height);this.follow.resize(this.width/this.height);this.setCamera(true);}
   setCamera(immediate=false,dt=1/60){
     const aspect=this.width/this.height;
@@ -724,7 +732,7 @@ export class ForestWorld {
       this.scene.fog.near=32-this.weather.blend*9;this.scene.fog.far=110-this.weather.blend*28;return;
     }
     if(this.thirdPerson){
-      const position=this.story==='arrival'?{x:BUBU.x-.5,z:BUBU.z-1}:this.story==='party'?{x:BUBU.x-.8,z:BUBU.z}:this.state.position;
+      const position=this.away?this.dudu.position:this.story==='arrival'?{x:BUBU.x-.5,z:BUBU.z-1}:this.story==='party'?{x:BUBU.x-.8,z:BUBU.z}:this.state.position;
       const changed=this.camera!==this.follow.camera,oldYaw=this.follow.yaw;
       if(this.story==='party'||this.story==='arrival')this.follow.yaw=.35;
       this.camera=this.follow.update(position,this.cameraObstacles,dt,immediate||changed,this.mobile);
@@ -739,7 +747,7 @@ export class ForestWorld {
       if(this.story==='arrival'){desiredTarget.lerp(new THREE.Vector3(BUBU_NEST.x,0,BUBU_NEST.z+3),.55);desiredSize=Math.min(this.zoomView,24);}
       else if(this.story==='departure'){desiredTarget.set(DUDU_NEST.x,0,DUDU_NEST.z+2);desiredSize=this.mobile?22:25;}
       else if(this.story==='party'){desiredTarget.set(BUBU.x,0,BUBU.z);desiredSize=this.mobile?15:17;}
-      if(!this.cinematic){desiredTarget.lerp(new THREE.Vector3(),THREE.MathUtils.clamp((this.zoomView-50)/58,0,1));if(this.overview){desiredTarget.set(0,0,0);desiredSize=Math.max(94,86/aspect);}}
+      if(!this.cinematic){desiredTarget.lerp(new THREE.Vector3(),THREE.MathUtils.clamp((this.zoomView-50)/58,0,1));if(this.overview){desiredTarget.set(0,0,0);desiredSize=this.away?Math.max(65,62/aspect):Math.max(94,86/aspect);}}
     }
     else if(this.mobile){desiredTarget=new THREE.Vector3(-13,0,-22);desiredSize=103;}
     else{desiredTarget=new THREE.Vector3(-19,0,14);desiredSize=83;}
@@ -748,6 +756,7 @@ export class ForestWorld {
     this.camera.position.copy(this.cameraTarget).add(new THREE.Vector3(68,84,96));this.camera.lookAt(this.cameraTarget);this.camera.updateMatrixWorld();
   }
   update(dt, moving=false, running=false, paused=false){
+    if(this.away){this.travel.update(dt,moving,paused,animateBearFace);return;}
     this.time+=dt;const t=this.time;
     updateVegetation(t,this.reducedMotion,this.weather.blend);
     this.dudu.position.x=this.state.position.x;this.dudu.position.z=this.state.position.z;
