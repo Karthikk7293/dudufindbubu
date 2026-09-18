@@ -1,0 +1,17 @@
+frames/
+previews/
+*.wav
+*.rgb
+__pycache__/
+encode-*.log
+*.mp4
+*.webm
+*.mov
+*.jpg
+*.jpeg
+*.png
+*.webp
+*.gif
+capture-manifest.json
+verification.json
+browser-verification.json
