@@ -3,7 +3,7 @@ import { icons } from './icons.js';
 
 const $=id=>document.getElementById(id);
 export class AdventureJournal {
-  constructor(onTrail){
+  constructor(){
     this.tab='gifts';this.key='';
     document.querySelectorAll('[data-journal-tab]').forEach(button=>{
       button.addEventListener('click',()=>this.select(button.dataset.journalTab));
@@ -13,7 +13,6 @@ export class AdventureJournal {
         if(next!==null){event.preventDefault();this.select(tabs[next].dataset.journalTab);tabs[next].focus();}
       });
     });
-    $('journal-places').addEventListener('click',event=>{const button=event.target.closest('[data-place]');if(button&&!button.disabled)onTrail(PLACES.find(place=>place.id===button.dataset.place));});
     this.select('gifts');
   }
   select(tab){
@@ -34,7 +33,7 @@ export class AdventureJournal {
     $('journey-dots').innerHTML=Array.from({length:8},(_,i)=>`<i class="${i<chapter.count?'filled':''}"></i>`).join('');
     $('journal-places').innerHTML=PLACES.map(place=>{
       const found=adventure.places.includes(place.id),locked=place.afterBirthday&&!game.completed;
-      return `<article class="journal-place ${found?'visited':''}" style="--stamp:${place.color}"><div class="place-stamp" aria-hidden="true">${icons[place.icon]||icons.leaf}</div><span class="entry-status">${found?'DISCOVERED':locked?'AFTER THE BIRTHDAY':'A PLACE TO FIND'}</span><h3>${place.name}</h3><p>${found?place.memory:place.hint}</p><button data-place="${place.id}" ${locked?'disabled':''}>${locked?'Keep gathering gifts':found?'Visit again ↗':'Follow this trail ↗'}</button></article>`;
+      return `<article data-place="${place.id}" class="journal-place ${found?'visited':''}" style="--stamp:${place.color}"><div class="place-stamp" aria-hidden="true">${icons[place.icon]||icons.leaf}</div><span class="entry-status">${found?'DISCOVERED':locked?'AFTER THE BIRTHDAY':'A PLACE TO FIND'}</span><h3>${place.name}</h3><p>${found?place.memory:place.hint}</p></article>`;
     }).join('');
     $('journal-friends').innerHTML=FRIENDS.map(friend=>{
       const found=adventure.friends.includes(friend.kind);

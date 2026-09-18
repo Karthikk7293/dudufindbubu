@@ -1,3 +1,4 @@
+import { chooseGroundPoint } from './manual-input.mjs';
 import { chromium } from 'playwright';
 import assert from 'node:assert/strict';
 import { SAVE_KEY, freshState } from '../src/game-state.js';
@@ -32,13 +33,13 @@ try{
   if(process.argv.includes('--preview')){assert.deepEqual(errors,[]);await page.close();}else{
     await page.addInitScript(state=>{window.__DUDU_TEST_STATE__=state;},{...freshState(),departed:true,position:{x:13,z:-1}});await page.reload();await page.waitForFunction(()=>window.__dudu);
     await page.locator('#start-button').click();
-    await page.locator('#guide-button').click();await page.waitForFunction(()=>window.__dudu.snapshot().nearby&&window.__dudu.snapshot().nearby!=='bubu',null,{timeout:90000});
-    await page.locator('#interact-button').click();await page.waitForFunction(()=>window.__dudu.snapshot().state.collected.length===1);assert.equal((await snap()).state.bubuArrived,false);console.log('Gift guidance and collection work at night.');await page.close();
+    await chooseGroundPoint(page,{x:13,z:-5});await page.waitForFunction(()=>window.__dudu.snapshot().nearby&&window.__dudu.snapshot().nearby!=='bubu',null,{timeout:90000});
+    await page.locator('#interact-button').click();await page.waitForFunction(()=>window.__dudu.snapshot().state.collected.length===1);assert.equal((await snap()).state.bubuArrived,false);console.log('Manual gift discovery and collection work at night.');await page.close();
   }
   const tablet=await browser.newPage({viewport:{width:768,height:1024},deviceScaleFactor:1,isMobile:true,hasTouch:true,reducedMotion:'reduce'});tablet.setDefaultTimeout(90000);tablet.on('pageerror',e=>errors.push(e.message));tablet.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
   await tablet.addInitScript(({key,state})=>window.__DUDU_TEST_STATE__=state,{key:SAVE_KEY,state:{...freshState(),departed:true}});
   await tablet.goto(url);await tablet.waitForFunction(()=>window.__dudu,null,{timeout:90000});await tablet.locator('#intro-time').tap();await tablet.locator('#start-button').tap();await tablet.waitForFunction(()=>window.__dudu.snapshot().state.departed,null,{timeout:60000});
-  const guide=await tablet.locator('#guide-button').boundingBox(),controls=await tablet.locator('#play-tools').boundingBox();assert.ok(guide.x+guide.width<controls.x||guide.y>=controls.y+controls.height,'Guide and four controls do not overlap');assert.equal(await tablet.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
+  const guide=await tablet.locator('#journey-status').boundingBox(),controls=await tablet.locator('#play-tools').boundingBox();assert.ok(guide.x+guide.width<controls.x||guide.y>=controls.y+controls.height,'Guide and four controls do not overlap');assert.equal(await tablet.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
   await tablet.screenshot({path:'test-results/new-forest-night-tablet.png'});await tablet.locator('#play-time').tap();await tablet.waitForFunction(()=>window.__dudu.snapshot().nightBlend===0,null,{timeout:45000});assert.equal(await tablet.locator('#play-time').getAttribute('aria-pressed'),'false');
   const joy=await tablet.locator('#joystick').boundingBox(),touch=await tablet.context().newCDPSession(tablet),start=await tablet.evaluate(()=>window.__dudu.snapshot().position);
   await touch.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:joy.x+90,y:joy.y+55}]});await tablet.waitForFunction(start=>Math.hypot(window.__dudu.snapshot().position.x-start.x,window.__dudu.snapshot().position.z-start.z)>.5,start,{timeout:30000});await touch.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});

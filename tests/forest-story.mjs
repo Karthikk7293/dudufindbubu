@@ -1,3 +1,4 @@
+import { chooseGroundPoint } from './manual-input.mjs';
 import { chromium } from 'playwright';
 import assert from 'node:assert/strict';
 import { GIFTS, freshState, DESTINATION } from '../src/game-state.js';
@@ -28,7 +29,7 @@ try{
   await page.waitForSelector('#ending-dialog[open]');await page.getByRole('button',{name:'Walk together'}).click();
   assert.equal((await snap()).following,true);assert.equal((await snap()).state.completed,true);
   assert.equal(await page.locator('#journal-chapter').textContent(),'CHAPTER 4 / 4');
-  const start=(await snap()).bubuPosition;await page.locator('#guide-button').click();
+  const start=(await snap()).bubuPosition;await chooseGroundPoint(page,{x:0,z:-24},{wait:false});
   await page.waitForFunction(p=>Math.hypot(window.__dudu.snapshot().bubuPosition.x-p.x,window.__dudu.snapshot().bubuPosition.z-p.z)>.7,start);
   await page.locator('#play-pause').click();await page.screenshot({path:'test-results/forest-story-together.png'});
   assert.deepEqual(errors,[]);console.log('Bubu arrival, all gift routes, birthday wish, party pause, and both bears walking together passed.');

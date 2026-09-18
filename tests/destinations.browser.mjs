@@ -1,3 +1,4 @@
+import { chooseGroundPoint } from './manual-input.mjs';
 import { chromium } from 'playwright';
 import assert from 'node:assert/strict';
 import { freshState, GIFTS } from '../src/game-state.js';
@@ -28,7 +29,7 @@ try{
     await page.locator(`[data-destination="${place.id}"]`).click();
     await page.waitForFunction(id=>{const s=window.__dudu.snapshot();return s.destination.id===id&&!s.travelling;},place.id);
     let state=await snap();assert.equal(state.destination.forestVisible,false);assert.equal(state.destination.sceneCount,1);assert.equal(state.bubuVisible,together);assert.deepEqual(state.state.collected,before.state.collected);
-    await page.locator('#guide-button').click();
+    await chooseGroundPoint(page,place.landmarks[0],{touch:!desktop});
     await page.waitForFunction(()=>{const s=window.__dudu.snapshot();return s.destination.landmarks.some(l=>Math.hypot(s.position.x-l.x,s.position.z-l.z)<2.3);});
     await page.keyboard.press('e');await page.waitForFunction(id=>window.__dudu.snapshot().destination.memories.some(m=>m.startsWith(id+'/')),place.id);
     const memoryCount=(await snap()).destination.memories.length;await page.keyboard.press('e');assert.equal((await snap()).destination.memories.length,memoryCount);

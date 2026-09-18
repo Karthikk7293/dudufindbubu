@@ -50,8 +50,7 @@ controls and verification steps.
 - **R / circular arrow:** look from behind Dudu
 - **E / Space:** collect a nearby present or talk to Bubu
 - **M:** map
-- **B:** gift bag, notes, and hints; select a missing gift and choose its trail
-- **Gift pointer / top-left card:** walk to the tracked gift; tap again nearby to collect it
+- **B:** gift bag, notes, and optional written clues
 - **+ / − or mouse wheel:** zoom in / out
 - **0 / overview button:** see the whole forest or follow Dudu
 - **T / sun–moon button:** switch between day and night (also available before play and in the pause menu)
@@ -67,7 +66,7 @@ A skeleton of the forest appears immediately while the game loads. The progress 
 
 Play begins in a close third-person perspective, with a low camera that follows Dudu. Drag to look around the trees, flowers and presents; adjust the distance with the zoom controls. When a trunk, canopy, roadside lamp, or wooden sign blocks Dudu, the camera eases toward a clear side and returns after leaving the tree. Accurate crown volumes and continuous trunk boundaries keep the camera outside the foliage. The overhead view and whole-forest overview are still available.
 
-The eight gifts can be collected in any order. The expanded forest has connected inner and outer roads, two ponds with bridges, two bear nests, heart balloons, and roaming rabbits, deer, foxes, and sheep. Collecting a gift displays a brief message without interrupting your walk. A labelled pointer and a glowing, collision-aware trail lead to the next missing gift, including the love letter. The pointer stays at the screen edge when the gift is off screen. Open the bag to track a particular gift, read a note, or get a hint. The trail leads to Bubu once the bag is full. Gentle snow, warm sunshine, flying birds, and windblown leaves bring the forest to life; lambs have rounded faces, soft ears, and little smiles.
+The eight gifts can be collected in any order. The expanded forest has connected inner and outer roads, two ponds with bridges, two bear nests, heart balloons, and roaming rabbits, deer, foxes, and sheep. Collecting a gift displays a brief message without opening a dialog. Find gifts by exploring with the keyboard, thumbstick, or a ground point you choose. There are no automatic objective routes, directional pointers, or glowing trails. The map records collected gifts and discoveries; it does not reveal uncollected gifts or Bubu’s nest in advance. Open the bag for optional written clues. Once the bag is full, find Bubu’s home yourself. Gentle snow, warm sunshine, flying birds, and windblown leaves bring the forest to life; lambs have rounded faces, soft ears, and little smiles.
 
 The trees have textured bark, tapering branch forks, rounded leaves, layered canopy textures, and uneven pine boughs, with denser foliage on larger screens. The forest mixes spreading oaks, green trees with pink blossoms, umbrella crowns with hanging vines, willows, white-barked birches, and pines. Flower beds contain daisies, sunflowers, tulips, lavender, bluebells, and roses. Saplings, tall birches and pines, broad mature oaks, and elder trees have different heights and crown widths. Dudu and Bubu are smaller in proportion to their surroundings. Four small butterfly varieties visit the flowers; drifting clouds, gently swaying foliage, and falling blossom petals add movement.
 
@@ -93,11 +92,11 @@ to haptics off unless you explicitly enable them. Unsupported browsers show
 **Haptics unavailable**; actual vibration also depends on device settings.
 There is no continuous vibration for footsteps or rain.
 
-The playground fills the viewport when play starts and requests native browser fullscreen where supported. Only compact gift guidance, day/night, weather, bag, map, pause, and zoom controls stay visible. Sound, help, fullscreen, and restart are available from the pause menu.
+The playground fills the viewport when play starts and requests native browser fullscreen where supported. Only compact adventure progress, day/night, weather, bag, map, pause, and zoom controls stay visible. Sound, help, fullscreen, and restart are available from the pause menu.
 
 Bubu stays inside until **all eight gifts are collected and Dudu reaches her clearing**. Visiting early keeps her door closed. When she walks outside, choose **Celebrate Bubu’s birthday** (or press E nearby) to start the party: Dudu sets down the gifts, Bubu makes a candle wish, and both enjoy music and heart confetti. After the party, choose **Walk together**. Bubu follows Dudu around trees and over bridges, and you can stop to share a little moment.
 
-After the party, the pointer leads to the **Moonwatch nest** in the northwestern forest. At the ladder, press **E** or tap **Climb to the moon nest together**. Both bears walk to the ladder, then climb as daylight gradually turns to night. The camera rises with them to an open nest with a moon, clouds, stars, and shooting stars. Stay as long as you like; choose **Climb down together** to return to the paths. Pause and restart work during the climb. The moon visit keeps the rest of this adventure at night; it does not overwrite your saved day/night preference.
+After the party, look for the tall tree with a ladder to discover the **Moonwatch nest**. At the ladder, press **E** or tap **Climb to the moon nest together**. Both bears walk to the ladder, then climb as daylight gradually turns to night. The camera rises with them to an open nest with a moon, clouds, stars, and shooting stars. Stay as long as you like; choose **Climb down together** to return to the paths. Pause and restart work during the climb. The moon visit keeps the rest of this adventure at night; it does not overwrite your saved day/night preference.
 
 **Refreshing always starts a new adventure:** Dudu returns to his nest, the bag is empty, Bubu stays inside, and the birthday and companion walk reset. Progress is kept only while this page remains open. Older stored progress is cleared. Sound, weather, and day/night preferences remain saved. The pause menu’s restart button also starts over.
 
@@ -111,9 +110,9 @@ nearby gifts take priority, and sleeping friends rest at night. Greetings bring
 a brief look toward Dudu and a small heart effect. Places and friends do not
 change the eight-gift birthday requirement.
 
-Choose a place's trail to walk there automatically. Tap the guide again or
-**Walking · Stop** to stop, and use **Back to birthday trail** to restore gift
-guidance. Manual movement also stops automatic walking.
+The journal provides written clues and records places you discover. Choose your
+own route with the keyboard, thumbstick, or by tapping the ground. **Walking ·
+Stop** cancels a ground route; keyboard and thumbstick movement also cancel it.
 
 Press **X**, or choose **Make a postcard** from the journal or pause menu, to
 freeze the adventure and compose a picture. Drag or use arrow keys to orbit;
@@ -161,7 +160,18 @@ npm run test:browser -- --experience --tablet
 npm run test:browser -- --moon-nest
 ```
 
-Browser checks run against the dev server on port 3000 and use Google Chrome at `/usr/bin/google-chrome`. Override `GAME_URL` or `CHROME_PATH` as needed. Screenshots are saved to `test-results/`. The full browser suite checks the departure, gift pointer and letter collection, all-gifts arrival gate, candle wish and birthday party, walking together, reset on refresh, restart, fullscreen layout, zoom, map and bag menus, sound, atmosphere, and real tablet pinch and joystick events. The shorter interaction suite skips the gift and ending checkpoints. The refinements check focuses on the picnic pointer, pausing the birthday party, walking together, refresh behaviour, reduced motion, lamb visuals, and tablet controls. The character check renders front and three-quarter previews, then checks the refined bears during their birthday and companion walk. Logic tests cover save migration, all-gift gating, gift selection and proximity, safe companion restoration, following around trees and across both bridges without teleporting, zoom limits, collision, and pathfinding.
+Manual exploration checks (desktop and a landscape touch viewport):
+
+```sh
+GAME_URL=http://localhost:3002 node tests/exploration.browser.mjs
+GAME_URL=http://localhost:3002 node tests/exploration.browser.mjs --mobile
+```
+
+These verify that clues never start a route, hidden objectives stay off the map,
+collecting the last gift leaves Dudu where you stopped, and Bubu only appears
+after you walk to her home. They also check discovering destination memories.
+
+Browser checks run against the dev server on port 3000 and use Google Chrome at `/usr/bin/google-chrome`. Override `GAME_URL` or `CHROME_PATH` as needed. Screenshots are saved to `test-results/`. The full browser suite checks the departure, manual exploration and letter collection, all-gifts arrival gate, candle wish and birthday party, walking together, reset on refresh, restart, fullscreen layout, zoom, map and bag menus, sound, atmosphere, and real tablet pinch and joystick events. The shorter interaction suite skips the gift and ending checkpoints. The refinements check focuses on the picnic interaction, pausing the birthday party, walking together, refresh behaviour, reduced motion, lamb visuals, and tablet controls. The character check renders front and three-quarter previews, then checks the refined bears during their birthday and companion walk. Logic tests cover save migration, all-gift gating, gift selection and proximity, safe companion restoration, following around trees and across both bridges without teleporting, zoom limits, collision, and pathfinding.
 
 Deploy the generated `dist/` directory to any static web host. No backend is needed.
 

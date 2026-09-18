@@ -22,9 +22,10 @@ or choose **Visit another destination** in the pause menu or local map.
 
 The five new destinations are optional exploration trips. The birthday gifts
 and celebration remain in Sunnywood. Each new place has three golden memory
-markers: follow the guide, get close, then press **E** or tap the heart. Read
+markers: explore to find them, get close, then press **E** or tap the heart. Read
 your collected memories in the destination menu's **Your travel memories**
-section, also reachable from the journal.
+section, also reachable from the journal. The map records memories after you
+collect them; it does not reveal their locations in advance.
 
 ## Checks to try
 
@@ -60,7 +61,7 @@ PREVIEW_URL=http://localhost:4174 npm run test:deployment
 ```
 
 The browser scripts use local Chrome and software-rendering synchronization.
-They test real travel controls, a memory in each destination, maps, photo export,
+They test real travel controls, manual exploration and a memory in each destination, maps, photo export,
 companion movement, restoration, restart and refresh. Unit tests check routes
 to all 15 landmarks, navigation boundaries, deduplication, scene disposal,
 failed-load recovery and frozen/reduced-motion animation. Physical phone

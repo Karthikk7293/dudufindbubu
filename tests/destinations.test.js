@@ -49,7 +49,7 @@ test('Bubu follows destination paths without using the old forest ponds',()=>{
 
 function travelWorld(completed=false){
   const world={scene:new THREE.Scene(),state:{...freshState(),departed:true,completed,collected:['flowers']},story:'exploring',time:10,mobile:true,obstacles:[],cameraObstacles:[],follow:{yaw:.7},renderer:{compileAsync:async()=>{},shadowMap:{}},sky:{setPalette(){}},setCamera(){},cinematic:false};
-  for(const name of ['ambient','sunLight','fillLight','dudu','bubu','clickMarker','guidance']){world[name]=new THREE.Group();world.scene.add(world[name]);}
+  for(const name of ['ambient','sunLight','fillLight','dudu','bubu','clickMarker']){world[name]=new THREE.Group();world.scene.add(world[name]);}
   for(const bear of [world.dudu,world.bubu])bear.userData.umbrella={update(){}};
   world.bubu.visible=completed;world.bubu.position.set(6,.2,-27);world.reactions={mesh:new THREE.Group(),reset(){}};world.scene.add(world.reactions.mesh);
   world.rain={streaks:new THREE.Group(),puddles:new THREE.Group(),ripples:new THREE.Group()};world.scene.add(...Object.values(world.rain));

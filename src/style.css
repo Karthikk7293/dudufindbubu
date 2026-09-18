@@ -56,20 +56,14 @@
 }
 @media(max-height:520px) and (pointer:coarse){.zoom-tools{bottom:24px;right:112px}.playing .toast{bottom:20px;max-width:300px}.playing .interact{bottom:83px}.touch-controls .joystick{width:90px;height:90px}.play-tools{top:12px}}
 
-/* A small trail marker stays useful even when its gift is outside the view. */
+/* Warm light and birthday captions keep the scene feeling alive. */
 .sunlight{position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse at 5% 0%,#fff3c034,transparent 48%);mix-blend-mode:screen}
-.guide-card{position:absolute;left:max(25px,env(safe-area-inset-left));top:max(24px,env(safe-area-inset-top));display:flex;align-items:center;gap:10px;max-width:250px;padding:10px 13px;border-radius:16px;background:#fff9e8ed;border:1px solid #fffef2;box-shadow:0 4px 20px #52623616;z-index:3;text-align:left;backdrop-filter:blur(8px)}
-#guide-art svg{width:32px;height:32px}.guide-copy{display:flex;flex-direction:column;gap:4px}.guide-copy strong{font-size:12px;font-weight:600}.guide-copy small{font-size:9px;color:#78856b;white-space:nowrap}#guide-arrow{font-size:26px;color:#ad7950;display:inline-block;line-height:1;margin-left:5px}
-.gift-pointer{position:absolute;z-index:2;display:flex;flex-direction:column;align-items:center;gap:3px;padding:0;background:transparent;transform:translate(-50%,-100%);white-space:nowrap;filter:drop-shadow(0 2px 4px #50603520)}
-.gift-pointer:hover{transform:translate(-50%,-100%) translateY(-3px)}#pointer-name{font-size:10px;font-weight:600;padding:7px 12px;border-radius:20px;background:#fff6ddf5;border:1px solid #fffdf3;color:#7c5b3f}.pointer-arrow{width:29px;height:29px;display:grid;place-items:center;font-size:22px;line-height:1;color:#fffbee;background:#aa7852;border:2px solid #fff4d6;border-radius:50%}.gift-pointer.offscreen .pointer-arrow{background:#49634b}
-.bag-dialog .bag-slot.tracked{outline:2px solid #b78658;outline-offset:3px}.bag-dialog #track-gift{color:#93663f;margin:4px auto 14px}
 .party-caption{position:absolute;top:12%;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;gap:12px;align-items:center;width:90%;pointer-events:none;color:#5d6948;text-align:center;text-shadow:0 2px 15px #fff7d5}
 .party-caption>span{font-size:9px;letter-spacing:2.5px}.party-caption strong{font:italic 500 clamp(24px,4vw,40px) var(--serif)}
-@media(max-width:760px){.guide-card{top:max(17px,env(safe-area-inset-top));left:max(16px,env(safe-area-inset-left));padding:9px;gap:7px;max-width:calc(100% - 169px);border-radius:13px}#guide-art svg{width:25px;height:25px}.guide-copy strong{font-size:10px}.guide-copy small{font-size:8px}#guide-arrow{font-size:22px;margin-left:0}#pointer-name{font-size:9px;padding:6px 10px}.pointer-arrow{width:25px;height:25px;font-size:19px}.party-caption{top:14%}}
-@media(max-width:360px){#guide-art{display:none}.guide-card{max-width:calc(100% - 165px)}}
+@media(max-width:760px){.party-caption{top:14%}}
 
 /* Moonlit controls stay readable while keeping the forest in view. */
-.topbar,.bottom-bar,.floating-button,.zoom-tools,.guide-card,.sunlight{transition:background 1s,color .7s,border-color .7s,opacity 1s}
+.topbar,.bottom-bar,.floating-button,.zoom-tools,.sunlight{transition:background 1s,color .7s,border-color .7s,opacity 1s}
 .night .topbar,.night .bottom-bar{background:#111e33;border-color:#35445a;color:#c7d1d8}
 .night .brand,.night .intro h1{color:#f3ecda}.night .brand-plus{color:#d2be99}
 .night .chapter,.night .intro p,.night .intro-notes,.night .sound-note,.night .footer-love{color:#bac8d1}
@@ -78,17 +72,12 @@
 .night .icon-button{color:#e3ddc9;border-color:#5b687b}.night .icon-button:hover{background:#2a3b53}
 .night .floating-button,.night .zoom-tools{background:#18283ee8;border-color:#8290a34d;color:#f3e6c9;box-shadow:0 3px 18px #02081233}
 .night .floating-button:hover,.night .zoom-tools button:hover,.night .zoom-tools button[aria-pressed=true]{background:#354760}
-.night #play-time{color:#f5d78b}.night .guide-card{background:#17283feb;border-color:#8492a64d;color:#f2e8d1}
-.night .guide-copy small{color:#c4d0da}.night #guide-arrow{color:#f0c986}
-.night #pointer-name{background:#263b52ed;color:#ffe7b3;border-color:#a6a18466}.night .pointer-arrow{background:#b78c50;color:#fff8dc;border-color:#f4d995}
-.night .gift-pointer.offscreen .pointer-arrow{background:#354b65}.night .sunlight{opacity:0}
+.night #play-time{color:#f5d78b}.night .sunlight{opacity:0}
 .night .party-caption{color:#ffeac0;text-shadow:0 2px 18px #152640}.night.playing .toast{background:#24374eee}
 .night .touch-interact,.night .joystick{background:#233b5277;border-color:#fff1c877;color:#ffe6b2}.night #joystick-knob{background:#f3e8c94d;border-color:#fff2d6a3}
 @media(max-width:760px){
-  .guide-card{max-width:calc(100% - 225px)}#guide-art{display:none}
   .topbar-right{gap:8px}.topbar-right .icon-button{width:34px;height:34px}
 }
-@media(max-width:380px){.guide-card{top:75px;max-width:190px}.gift-pointer{margin-top:30px}}
 
 /* The static shell is visible before any game JavaScript downloads. */
 [hidden]{display:none!important}
@@ -100,7 +89,7 @@
 @media(prefers-reduced-motion:reduce){.skeleton-island::after,.skeleton-copy i::after,.skeleton-copy b::after,.skeleton-map::after{animation:none}#loading-progress::-webkit-progress-value{transition:none}}
 
 .moon-caption{position:absolute;left:50%;bottom:112px;transform:translateX(-50%);text-align:center;pointer-events:none;color:#fff4d8;text-shadow:0 2px 12px #0b173e;z-index:2;max-width:560px;width:75%}.moon-caption>span{display:block;font-size:9px;letter-spacing:3px;color:#d8c69e}.moon-caption strong{display:block;font:500 27px/1.3 var(--serif);margin:10px 0}.moon-caption small{font-size:12px;line-height:1.7;color:#e0dfdc}.moon-visit .zoom-tools,.moon-visit .touch-controls{display:none!important}.moon-visit .interact{bottom:32px}.moon-visit .toast{bottom:210px}
-@media(pointer:coarse) and (min-width:768px){.zoom-tools{bottom:170px}.playing .interact{bottom:185px}.playing .toast{bottom:260px}.moon-visit .interact{bottom:32px}.floating-button{width:46px;height:46px}.zoom-tools button{min-height:40px}.guide-card{max-width:280px}}
+@media(pointer:coarse) and (min-width:768px){.zoom-tools{bottom:170px}.playing .interact{bottom:185px}.playing .toast{bottom:260px}.moon-visit .interact{bottom:32px}.floating-button{width:46px;height:46px}.zoom-tools button{min-height:40px}}
 .moon-caption{left:auto;right:32px;top:110px;bottom:auto;width:320px;max-width:40%;transform:none;text-align:right}.moon-caption strong{font-size:25px}.moon-caption small{font-size:11px}
 
 /* Weather belongs to the forest; the same control remains available during play. */

@@ -14,7 +14,7 @@ try{
   await page.goto(base,{waitUntil:'domcontentloaded'});await page.waitForSelector('#loading',{state:'hidden'});
   assert.equal(await page.evaluate(()=>typeof window.__dudu),'undefined','Production excludes diagnostic fixture hooks');
   assert.equal(await page.locator('#start-button').isEnabled(),true);
-  await page.locator('#start-button').tap();await page.waitForSelector('#app.playing');await page.waitForSelector('#guide-button:not(.hidden)');
+  await page.locator('#start-button').tap();await page.waitForSelector('#app.playing');await page.waitForSelector('#journey-status:not(.hidden)');
   assert.ok(await page.locator('#touch-controls').isVisible());
   assert.ok(!requests.some(url=>/\/tracking\/|hand_landmarker|\/src\/engine\//.test(url)),'Forest never downloads the engine tracking assets');
   assert.equal(requests.filter(url=>url.endsWith('/models/characters/sheep.glb')).length,1,'The flock shares one sheep download');

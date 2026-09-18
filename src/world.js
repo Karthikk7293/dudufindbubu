@@ -236,8 +236,6 @@ export class ForestWorld {
     this.raycaster=new THREE.Raycaster();this.pointer=new THREE.Vector2();this.groundPlane=new THREE.Plane(new THREE.Vector3(0,1,0),0);
     this.clickMarker=new THREE.Mesh(new THREE.RingGeometry(.25,.34,28),new THREE.MeshBasicMaterial({color:0xfff3d7,transparent:true,opacity:.8,side:THREE.DoubleSide}));
     this.clickMarker.rotation.x=-Math.PI/2;this.clickMarker.visible=false;this.scene.add(this.clickMarker);
-    this.guidance=new THREE.InstancedMesh(new THREE.CircleGeometry(.13,10),new THREE.MeshBasicMaterial({color:0xc49653,transparent:true,opacity:.85,depthWrite:false}),160);
-    this.guidance.count=0;this.guidance.frustumCulled=false;this.scene.add(this.guidance);
     this.atmosphere=new ForestAtmosphere(this.scene,this.blossomSites);
     this.sunlight=new ForestSunlight(this.scene);
     this.rain=new ForestRain(this.scene,currentScreen().phone);
@@ -568,7 +566,6 @@ export class ForestWorld {
     this.roadLighting.update(Math.max(n,rain*.4),this.state.position);
     const windows=mat(0xf1db9c);windows.emissive.setHex(0xffb969);windows.emissiveIntensity=n*.85;
     this.candleFlame.material.emissive.setHex(0xffb34e);this.candleFlame.material.emissiveIntensity=.3+n;
-    this.guidance.material.color.setHex(0xc49653).lerp(new THREE.Color(0xffda92),n);
     this.butterflies.forEach(b=>b.group.visible=n<.7&&rain<.55);
   }
   batchStaticGeometry(){
@@ -697,11 +694,6 @@ export class ForestWorld {
     this.dudu.userData.expression.update(dt,{mood:duduMood,look:lookAtBearTarget(this.dudu,duduTarget),scripted},this.reducedMotion);
     this.bubu.userData.expression.update(dt,{mood:bubuMood,look:lookAtBearTarget(this.bubu,bubuTarget),scripted},this.reducedMotion);
   }
-  showGuidance(path){
-    const dummy=new THREE.Object3D();dummy.rotation.x=-Math.PI/2;
-    this.guidance.count=Math.min(path.length,160);
-    path.slice(0,160).forEach((point,i)=>{const onBridge=PONDS.some(p=>Math.abs(point.z-p.z)<1&&Math.abs(point.x-p.x)<5.6);dummy.position.set(point.x,this.away?this.travel.active.height(point.x,point.z)+.075:onBridge?.6:.27,point.z);dummy.updateMatrix();this.guidance.setMatrixAt(i,dummy.matrix);});this.guidance.instanceMatrix.needsUpdate=true;
-  }
   projectLocation(x,y,z){
     const point=new THREE.Vector3(x,y,z),local=point.clone().applyMatrix4(this.camera.matrixWorldInverse),front=local.z<0;
     point.project(this.camera);
@@ -794,7 +786,6 @@ export class ForestWorld {
     this.atmosphere.update(paused?0:dt,this.time,this.playing?this.state.position:{x:0,z:0},this.reducedMotion,this.nightBlend,this.weather.blend);
     this.rain.update(this.weather,this.playing?this.state.position:{x:0,z:0},this.nightBlend,this.reducedMotion,[this.dudu,this.bubu].filter(b=>b.userData.umbrella.active).map(b=>b.userData.umbrella.cover));
     this.sky.update(paused?0:dt,t,this.nightBlend,this.reducedMotion,this.story==='moon'?this.moonJourney.progress:0,this.weather.blend);
-    if(this.guidance.count&&!this.reducedMotion)this.guidance.material.opacity=.65+Math.sin(t*2)*.2;
     this.setCamera(false,dt);this.reactions.update(paused?0:dt,this.camera);this.renderer.clear();this.sky.render(this.renderer);this.renderer.clearDepth();this.renderer.render(this.scene,this.camera);
   }
 }

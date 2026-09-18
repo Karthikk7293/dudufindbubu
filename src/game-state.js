@@ -57,11 +57,6 @@ export function canCelebrate(state) {
   return !state.completed && state.bubuArrived && state.collected.length === GIFTS.length && Math.hypot(state.position.x - BUBU.x, state.position.z - BUBU.z) <= 3.2;
 }
 export function shouldRevealBubu(state) { return state.departed&&state.collected.length===GIFTS.length&&!state.bubuArrived&&Math.hypot(state.position.x-DESTINATION.x,state.position.z-DESTINATION.z)<=4; }
-export function guidanceTarget(state, preferredId) {
-  if(state.completed)return {...MOON_NEST.entry,id:'moon-nest',short:'Moonwatch nest'};
-  const missing=GIFTS.filter(g=>!state.collected.includes(g.id));
-  return missing.find(g=>g.id===preferredId)||missing.sort((a,b)=>Math.hypot(a.x-state.position.x,a.z-state.position.z)-Math.hypot(b.x-state.position.x,b.z-state.position.z))[0]||{...(state.bubuArrived?BUBU:DESTINATION),id:'bubu',short:state.bubuArrived?'Birthday picnic':'Bubu’s nest'};
-}
 export function clampZoom(view) { return Math.min(108,Math.max(14,view)); }
 export function isWalkable(x, z, obstacles = [], layout) {
   if (Math.hypot(x, z) > (layout?.radius ?? WORLD_RADIUS)) return false;

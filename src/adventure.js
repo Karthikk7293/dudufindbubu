@@ -34,7 +34,7 @@ export function befriend(adventure,kind){
 
 export function birthdayChapter(game){
   const count=game.collected.length;
-  if(game.completed)return {number:4,title:'A little longer, together',detail:'Follow the moon trail. There’s a nest for two.',count};
+  if(game.completed)return {number:4,title:'A little longer, together',detail:'Find the tall tree with a ladder. There’s a nest for two.',count};
   if(game.bubuArrived)return {number:3,title:'Make a birthday wish',detail:'Join Bubu at the picnic and celebrate.',count};
   if(count===GIFTS.length)return {number:2,title:'Someone’s waiting for you',detail:'All eight gifts are ready. Visit Bubu’s nest.',count};
   return {number:1,title:'A bag full of love',detail:game.departed?'Eight little surprises, at your own pace.':'Your adventure begins at Dudu’s nest.',count};

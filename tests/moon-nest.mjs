@@ -23,7 +23,7 @@ try{
     for(const target of [...GIFTS,BUBU,MOON_NEST.entry])if(!findPath(START,target,window.__dudu.snapshot().obstacles).length)throw new Error(`No route to ${target.id||JSON.stringify(target)}`);
   });
   const sizes=(await snapshot()).treeSizes.map(t=>t.height);assert.ok(Math.max(...sizes)>Math.min(...sizes)*2.5);assert.ok((await snapshot()).bearScale<.75);
-  assert.equal((await snapshot()).guidance.id,'moon-nest');
+  assert.equal((await snapshot()).route,0);
   await page.screenshot({path:'test-results/moonwatch-tree-day.png'});
   await page.locator('#interact-button').click();await page.waitForFunction(()=>window.__dudu.snapshot().moonJourney?.phase==='climbing');
   await page.waitForFunction(()=>{const s=window.__dudu.snapshot();return s.nightBlend>.3&&s.nightBlend<.8;});
@@ -63,7 +63,7 @@ try{
   s=await snapshot();assert.ok(s.duduPosition.y<.5&&s.bubuPosition.y<.5);assert.equal(s.following,true);assert.equal(s.state.completed,true);assert.equal(s.timeOfDay,'night');
   await page.keyboard.down('w');await page.waitForFunction(p=>Math.hypot(window.__dudu.snapshot().position.x-p.x,window.__dudu.snapshot().position.z-p.z)>.35,s.position);await page.keyboard.up('w');
   console.log('Both bears climbed down safely and resumed walking together.');
-  await page.locator('#guide-button').click();
+  await page.locator('#interact-button').click();
   await page.waitForFunction(()=>{const s=window.__dudu.snapshot();return s.story==='moon'||s.nearby==='moon-nest'&&!s.route;});
   if((await snapshot()).story!=='moon')await page.locator('#interact-button').click();
   await page.waitForFunction(()=>window.__dudu.snapshot().moonJourney?.phase==='climbing');
@@ -77,7 +77,7 @@ try{
   const tablet=await browser.newPage({viewport:{width:768,height:1024},deviceScaleFactor:1,isMobile:true,hasTouch:true});tablet.setDefaultTimeout(150000);tablet.on('pageerror',error=>errors.push(error.message));
   await tablet.addInitScript(()=>localStorage.setItem('dudu-sound','off'));await tablet.goto(url,{waitUntil:'domcontentloaded'});await ready(tablet);await tablet.locator('#start-button').tap();await tablet.waitForFunction(()=>window.__dudu.snapshot().state.departed);
 assert.equal(await tablet.locator('#touch-controls').isVisible(),true);
-  const guide=await tablet.locator('#guide-button').boundingBox(),controls=await tablet.locator('#play-tools').boundingBox();assert.ok(guide.x+guide.width<controls.x);
+  const guide=await tablet.locator('#journey-status').boundingBox(),controls=await tablet.locator('#play-tools').boundingBox();assert.ok(guide.x+guide.width<controls.x);
   assert.equal(await tablet.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);await tablet.screenshot({path:'test-results/tablet-forest-proportions.png'});
   await tablet.close();assert.deepEqual(errors,[]);console.log('Tablet portrait play and controls render without overflow or browser errors.');
 }catch(error){if(page&&!page.isClosed())console.log('Browser state:',await page.evaluate(()=>({loading:document.querySelector('#loading-status')?.textContent,state:window.__dudu?.snapshot()})));throw error;}finally{await browser.close();}

@@ -7,7 +7,7 @@ export class DestinationTravel {
   constructor(world){
     this.world=world;this.current=DESTINATIONS[0];this.log=freshTravel();this.time=0;this.active=null;
     this.forestRoot=new THREE.Group();this.forestRoot.name='Sunnywood scenery';
-    this.shared=new Set([world.ambient,world.sunLight,world.fillLight,world.dudu,world.bubu,world.clickMarker,world.guidance,world.reactions.mesh,world.rain.streaks,world.rain.puddles,world.rain.ripples,this.forestRoot]);
+    this.shared=new Set([world.ambient,world.sunLight,world.fillLight,world.dudu,world.bubu,world.clickMarker,world.reactions.mesh,world.rain.streaks,world.rain.puddles,world.rain.ripples,this.forestRoot]);
     this.wrapForest();world.scene.add(this.forestRoot);
   }
   get away(){return this.current.id!=='forest';}
@@ -47,7 +47,7 @@ export class DestinationTravel {
     this.current=DESTINATIONS[0];this.forestRoot.visible=true;this.resetView();world.follow.yaw=home.yaw;this.home=null;
   }
   resetView(){
-    const world=this.world;world.follow.initialized=false;world.follow.yaw=.12;world.overview=false;world.clickMarker.visible=false;world.guidance.count=0;world.friendMoment=null;world.reactions.reset();
+    const world=this.world;world.follow.initialized=false;world.follow.yaw=.12;world.overview=false;world.clickMarker.visible=false;world.friendMoment=null;world.reactions.reset();
     world.renderer.shadowMap.needsUpdate=true;world.needsRender=true;
     world.sky.setPalette(this.current.id==='forest'?null:this.current.sky);
     world.dudu.position.set(world.state.position.x,this.active?.height(world.state.position.x,world.state.position.z)??.2,world.state.position.z);
@@ -58,11 +58,6 @@ export class DestinationTravel {
   reset(){this.returnHome();this.log=freshTravel();}
   nearby(){return this.current.landmarks.find(item=>Math.hypot(item.x-this.world.state.position.x,item.z-this.world.state.position.z)<3);}
   remember(item){return rememberLandmark(this.log,this.current.id,item.id,this.world.state.position);}
-  target(){
-    const pending=this.current.landmarks.filter(item=>!this.log.memories.includes(`${this.current.id}/${item.id}`));
-    pending.sort((a,b)=>Math.hypot(a.x-this.world.state.position.x,a.z-this.world.state.position.z)-Math.hypot(b.x-this.world.state.position.x,b.z-this.world.state.position.z));
-    return pending.length?{...pending[0],id:`memory:${pending[0].id}`,short:pending[0].name,icon:this.current.icon,memory:true}:{...this.current.spawn,id:'travel-onward',short:'A new horizon',icon:'map',onward:true};
-  }
   update(dt,moving,paused,animateFace){
     const world=this.world,place=this.current,region=this.active;this.time+=dt;
     const pos=world.state.position;world.dudu.position.set(pos.x,region.height(pos.x,pos.z),pos.z);
@@ -93,7 +88,7 @@ export class DestinationTravel {
     for(const path of this.active.paths){ctx.lineWidth=path.width*scale;ctx.beginPath();path.points.forEach(([x,z],i)=>i?ctx.lineTo(...point(x,z)):ctx.moveTo(...point(x,z)));ctx.stroke();}
     ctx.fillStyle='#71817488';for(const o of this.active.obstacles){ctx.beginPath();ctx.arc(...point(o.x,o.z),o.radius*scale,0,Math.PI*2);ctx.fill();}
     ctx.textAlign='center';ctx.font=`500 ${Math.round(scale*1.25)}px "DM Sans",sans-serif`;
-    for(const place of this.current.landmarks){const [x,y]=point(place.x,place.z),found=this.log.memories.includes(`${this.current.id}/${place.id}`);ctx.fillStyle=found?'#6d8d74':'#b88050';ctx.beginPath();ctx.arc(x,y,scale,0,Math.PI*2);ctx.fill();ctx.fillStyle='#43594d';ctx.fillText(place.name,x,y+2.7*scale);}
+    for(const place of this.current.landmarks){if(!this.log.memories.includes(`${this.current.id}/${place.id}`))continue;const [x,y]=point(place.x,place.z);ctx.fillStyle='#6d8d74';ctx.beginPath();ctx.arc(x,y,scale,0,Math.PI*2);ctx.fill();ctx.fillStyle='#43594d';ctx.fillText(place.name,x,y+2.7*scale);}
     if(this.world.bubu.visible){ctx.fillStyle='#f4eee3';ctx.beginPath();ctx.arc(...point(this.world.bubu.position.x,this.world.bubu.position.z),1.2*scale,0,Math.PI*2);ctx.fill();}
     ctx.fillStyle='#8f6644';ctx.beginPath();ctx.arc(...point(this.world.state.position.x,this.world.state.position.z),1.25*scale,0,Math.PI*2);ctx.fill();
   }

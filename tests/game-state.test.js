@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {freshState,restoreState,collectGift,canCelebrate,isWalkable,moveWithCollisions,findPath,GIFTS,BUBU,START,DESTINATION,WORLD_RADIUS,PONDS,shouldRevealBubu,clampZoom,guidanceTarget} from '../src/game-state.js';
+import {freshState,restoreState,collectGift,canCelebrate,isWalkable,moveWithCollisions,findPath,GIFTS,BUBU,START,DESTINATION,WORLD_RADIUS,PONDS,shouldRevealBubu,clampZoom} from '../src/game-state.js';
 
 test('invalid saves recover and untrusted gift ids are rejected',()=>{
   assert.deepEqual(restoreState('{broken'),freshState());
@@ -39,7 +39,9 @@ test('Bubu needs all eight gifts as well as Dudu arriving from home',()=>{
   state.position={...DESTINATION};assert.equal(shouldRevealBubu(state),false);
   state.departed=true;assert.equal(shouldRevealBubu(state),false);
   state.collected=GIFTS.slice(0,-1).map(g=>g.id);assert.equal(shouldRevealBubu(state),false);
-  state.collected.push(GIFTS.at(-1).id);assert.equal(shouldRevealBubu(state),true);
+  state.collected.push(GIFTS.at(-1).id);
+  state.position={...START};assert.equal(shouldRevealBubu(state),false,'Filling the bag never brings Bubu out remotely');
+  state.position={...DESTINATION};assert.equal(shouldRevealBubu(state),true);
   state.bubuArrived=true;assert.equal(shouldRevealBubu(state),false);
 });
 test('old saves migrate to the nest while keeping gifts',()=>{
@@ -54,13 +56,7 @@ test('zoom is bounded and both ponds have crossing routes',()=>{
 });
 
 
-test('guidance tracks the love letter, moves on after collecting it, then leads home',()=>{
-  const state=freshState();assert.equal(guidanceTarget(state,'letter').id,'letter');
-  state.collected=['letter'];assert.notEqual(guidanceTarget(state,'letter').id,'letter');
-  state.collected=GIFTS.map(g=>g.id);assert.equal(guidanceTarget(state,'letter').id,'bubu');
-  assert.equal(guidanceTarget(state).z,DESTINATION.z);state.bubuArrived=true;assert.equal(guidanceTarget(state).z,BUBU.z,'After the door opens the pointer leads to Bubu herself');
-  state.completed=true;assert.equal(guidanceTarget(state,'letter').id,'moon-nest');assert.equal(canCelebrate(state),false);
-});
+
 test('saved companionship requires a finished birthday and a safe position',()=>{
   const state={...freshState(),collected:GIFTS.map(g=>g.id),bubuArrived:true,companionPosition:{x:3,z:4}};
   assert.equal(restoreState(JSON.stringify(state)).companionPosition,null);

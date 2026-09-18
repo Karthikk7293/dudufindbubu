@@ -38,7 +38,7 @@ try{
   // The fifth HUD action must fit even the smallest supported landscape layout.
   await page.setViewportSize({width:568,height:320});
   const boxes=await page.locator('#play-tools button').evaluateAll(nodes=>nodes.map(n=>{const r=n.getBoundingClientRect();return {x:r.x,y:r.y,width:r.width,height:r.height,right:r.right};}));
-  const guide=await page.locator('#guide-button').boundingBox();
+  const guide=await page.locator('#journey-status').boundingBox();
   assert.equal(boxes.length,5);assert.ok(boxes.every(b=>b.width>=44&&b.height>=44&&b.right<=568));
   assert.ok(guide.x+guide.width<boxes[0].x);
   await page.screenshot({path:'test-results/forest-rain-small-phone.png'});

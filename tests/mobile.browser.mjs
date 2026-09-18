@@ -1,3 +1,4 @@
+import { chooseGroundPoint } from './manual-input.mjs';
 import { chromium } from 'playwright';
 import assert from 'node:assert/strict';
 import { mkdir } from 'node:fs/promises';
@@ -31,7 +32,7 @@ try{
   const frozen=state.time;await page.waitForTimeout(300);assert.equal((await snapshot()).time,frozen);
   await page.setViewportSize({width:844,height:390});await page.waitForSelector('#rotate-notice',{state:'hidden'});
   await page.waitForFunction(()=>window.__dudu.snapshot().camera.perspective&&!window.__dudu.snapshot().paused);
-  const controls=['#guide-button','#play-tools','#zoom-tools','#joystick','#touch-interact'];
+  const controls=['#journey-status','#play-tools','#zoom-tools','#joystick','#touch-interact'];
   for(const selector of controls){const b=await page.locator(selector).boundingBox();assert.ok(b.x>=0&&b.y>=0&&b.x+b.width<=844&&b.y+b.height<=390,`${selector} fits`);}
   const boxes=await Promise.all(controls.map(s=>page.locator(s).boundingBox()));
   for(let i=0;i<boxes.length;i++)for(let j=i+1;j<boxes.length;j++){const a=boxes[i],b=boxes[j];assert.ok(a.x+a.width<=b.x||b.x+b.width<=a.x||a.y+a.height<=b.y||b.y+b.height<=a.y,`${controls[i]} and ${controls[j]} do not overlap`);}
@@ -65,9 +66,9 @@ try{
   const map=await page.locator('#map-dialog').boundingBox();assert.ok(map.y>=0&&map.y+map.height<=390);
   await page.locator('#map-dialog .dialog-close').tap();
   console.log('Dialog rotation and map passed.');
-  // Follow the real route and collect the nearby chocolate gift with touch.
-  await page.locator('#play-bag').tap();await page.locator('[data-gift="chocolates"]').tap();await page.locator('#track-gift').tap();
-  await page.locator('#guide-button').tap();await page.waitForFunction(()=>window.__dudu.snapshot().nearby==='chocolates');
+  // Read a clue, choose a ground point and collect the chocolate gift with touch.
+  await page.locator('#play-bag').tap();await page.locator('[data-gift="chocolates"]').tap();assert.equal((await snapshot()).route,0);await page.locator('#bag-dialog .dialog-close').tap();
+  await chooseGroundPoint(page,{x:-22,z:19},{touch:true});await page.waitForFunction(()=>window.__dudu.snapshot().nearby==='chocolates');
   await page.locator('#touch-interact').tap();await page.waitForFunction(()=>window.__dudu.snapshot().state.collected.includes('chocolates'));
   assert.equal((await snapshot()).bubuVisible,false);
   console.log('Touch gift collection passed.');
