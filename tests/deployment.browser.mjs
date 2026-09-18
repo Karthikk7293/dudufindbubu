@@ -21,8 +21,5 @@ try{
   assert.equal(await study.evaluate(()=>typeof window.__duduStudio),'undefined');
   await study.locator('[data-clip="Graze"]').click();assert.equal(await study.locator('[data-clip="Graze"]').getAttribute('aria-pressed'),'true');
   await study.screenshot({path:'test-results/sheep-production.png'});await study.close();
-  const engine=await browser.newPage({viewport:{width:1280,height:800},deviceScaleFactor:1});engine.setDefaultTimeout(90000);engine.on('pageerror',e=>errors.push(e.message));engine.on('response',r=>{if(r.status()>=400)errors.push(`${r.status()} ${r.url()}`);});
-  await engine.goto(base+'/engine.html',{waitUntil:'domcontentloaded'});await engine.waitForSelector('#loading[hidden]',{state:'attached'});
-  assert.equal(await engine.locator('.part-row').count(),11);await engine.locator('#assemble-mode').click();await engine.locator('#step-action').click();
-  assert.deepEqual(errors,[]);console.log('Built forest plays on a landscape phone with one sheep asset; sheep studio and engine route work; no failed resources or runtime errors.');
+  assert.deepEqual(errors,[]);console.log('Built forest plays on a landscape phone with one sheep asset; sheep studio works; no failed resources or runtime errors.');
 }finally{await browser.close();}

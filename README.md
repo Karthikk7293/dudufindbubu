@@ -2,6 +2,10 @@
 
 A browser-based 3D birthday adventure inspired by the gentle exploration of [Messenger by Abeto](https://messenger.abeto.co/). Play as the brown bear Dudu, leave Dudu’s nest, gather eight gifts in a larger Sunnywood Forest, and visit the white bear Bubu at her nest. Bubu opens her door only when Dudu arrives with all eight gifts. Celebrate her birthday, then explore the forest together.
 
+This repository contains the forest game, its character studio, Blender assets,
+references and tests. Keep other applications and repository maintenance work in
+separate folders outside this checkout.
+
 ## Run locally
 
 ```sh
@@ -156,11 +160,7 @@ The experience checks separately cover the initial skeleton and download failure
 
 The moon-nest browser check covers tablet rendering, actual forest routes, climbing through dusk, paused elevated positions, stargazing and meteors, descent, and restarting during a visit. Add `--preview` for the climb and desktop/tablet treetop screenshots only.
 
-## Engine prototype
-
-The interactive engine study is preserved at **`/engine.html`** in both development and the Vercel build. The forest is the homepage. See [ENGINE.md](./ENGINE.md) for assembly, inspection, and experimental webcam hand controls. Engine modules and tracking assets are loaded only by that page.
-
-The mobile check exercises portrait entry, a denied orientation lock, landscape touch controls, simultaneous movement and camera swipes, pinch zoom, cancelled touches, dialog restoration after rotation, gift collection, night mode, small landscape screens, and a fresh adventure after refresh. `node tests/forest-story.mjs` checks arrival, celebration, pausing, and companion walking; `node tests/deployment.browser.mjs` checks both built pages against a preview server on port 4174 (`PREVIEW_URL` overrides it). `node tests/forest-visuals.mjs` captures the bear, wildlife, and tree studies.
+The mobile check exercises portrait entry, a denied orientation lock, landscape touch controls, simultaneous movement and camera swipes, pinch zoom, cancelled touches, dialog restoration after rotation, gift collection, night mode, small landscape screens, and a fresh adventure after refresh. `node tests/forest-story.mjs` checks arrival, celebration, pausing, and companion walking; `node tests/deployment.browser.mjs` checks the built game and character studio against a preview server on port 4174 (`PREVIEW_URL` overrides it). `node tests/forest-visuals.mjs` captures the bear, wildlife, and tree studies.
 
 The weather check covers rainy phone rendering, pause and weather controls, rainy night lighting, the five-action HUD at 568 × 320, preference restoration with a fresh adventure, and reduced motion. Unit checks cover weather timing, paused rain, bounded particles, phone particle limits, wet materials, and world-space texture scale.
 
