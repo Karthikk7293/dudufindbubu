@@ -62,3 +62,22 @@ test('the wider island still holds every landmark, gift and resident', () => {
     scene.dispose();
   }
 });
+
+test('reduced motion stills the scenery that travels, while animals go about their day', () => {
+  for (const place of places) {
+    const scene = new DestinationScene(place, true);
+    const travelling = [...(scene.traffic ?? []).map(car => car.vehicle), ...scene.riders.map(entry => entry.rider)];
+    const parked = travelling.map(item => ({ x: item.x, z: item.z }));
+    const resting = scene.animals.map(animal => ({ ...animal.brain.position }));
+    for (let frame = 0; frame < 300; frame++)
+      scene.update(1 / 60, 0, 0, true, [], { x: 70, z: 70 }, { gifts: [], walkable: () => true });
+    assert.equal(scene.time, 0, `${place.id}: the scene clock holds, so the tram, windmill and surf hold with it`);
+    travelling.forEach((item, index) => assert.equal(
+      Math.hypot(item.x - parked[index].x, item.z - parked[index].z), 0,
+      `${place.id}: something kept travelling with reduced motion turned on`));
+    if (scene.animals.length) assert.ok(
+      scene.animals.some((animal, index) => Math.hypot(animal.brain.position.x - resting[index].x, animal.brain.position.z - resting[index].z) > .2),
+      `${place.id}: its animals should still wander, as the forest's do`);
+    scene.dispose();
+  }
+});

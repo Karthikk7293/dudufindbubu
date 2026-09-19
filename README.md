@@ -43,7 +43,9 @@ other, brake at the two signalled crossroads, steer into their turns, take a
 U-turn now and then, and stop for a bear on the zebra crossing.
 Everything that travels follows a route drawn from the same points it rides, so
 a cart or sleigh always has a track beneath it, the boats keep to open water, and
-the cable car eases into each station.
+the cable car eases into each station. **Reduced motion stills all of it** —
+traffic, carts, boats and the cable car hold along with the tram, the windmill
+and the surf, while the animals carry on wandering as they do in the forest.
 **Bubu comes along on every trip**, before and after her birthday. Destination
 gifts are kept in your travel journal and never touch the birthday bag, so your
 birthday progress and forest position are exactly where you left them when you

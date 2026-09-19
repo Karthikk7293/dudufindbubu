@@ -57,16 +57,19 @@ destination menu's **Your travel memories** section.
    with the front wheels, and will U-turn or turn off at a junction. Step onto a
    crossing and the nearest car should stop for you. Nothing should ever drive
    over a pavement or through a building.
-7. Pause, then change day/night or weather. Snowlands uses snowfall instead of
+7. Turn on reduced motion. Every travelling thing should stop where it is —
+   cars, the cart, the boats, the cable car, the sleigh, the tram, the windmill
+   and the surf — while the animals keep wandering, as they do in the forest.
+8. Pause, then change day/night or weather. Snowlands uses snowfall instead of
    rain. City windows and village lamps light up at night.
-8. Use **X** to make a postcard. The scene pauses, and the destination appears
+9. Use **X** to make a postcard. The scene pauses, and the destination appears
    on the card and in its download filename.
-9. Travel before the birthday: Bubu should still come along and follow you.
+10. Travel before the birthday: Bubu should still come along and follow you.
    After the birthday she behaves the same way. In the forest she remains behind
    her own door until all eight gifts are collected.
-10. Return to the forest and try the Moonwatch ladder. Travel is unavailable
+11. Return to the forest and try the Moonwatch ladder. Travel is unavailable
    during departure, arrival, birthday and ladder scenes.
-11. Restart while away, then refresh. Both should start a fresh forest adventure,
+12. Restart while away, then refresh. Both should start a fresh forest adventure,
    with an empty bag and no destination gifts or memories.
 
 ## Automated checks
@@ -100,7 +103,15 @@ inside anything else or hangs off the island, you can stand where you arrive,
 and every travelled route is sampled along its length — land routes must stay on
 open ground and clear of every prop, boats must stay in open water — before the
 whole scene is run for a minute to check each travelling prop actually goes
-somewhere and keeps its place. Physical phone
+somewhere and keeps its place. A further check confirms reduced motion stops
+every travelling prop and the scene clock with them, while the animals keep
+moving.
+
+Ground scatter and flower beds use four- and thirty-six-triangle shapes rather
+than full spheres, and anything that moves merges its own rigid parts by
+material the way the animals do. Together those halved the triangles drawn in
+the village and the mountains and cut the city from 248 draw calls to 182, at
+phone detail settings and a third-person camera. Physical phone
 performance and haptic feel still need device testing.
 
 Only one additional destination scene exists at a time. Its GPU resources are

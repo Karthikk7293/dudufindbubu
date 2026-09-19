@@ -27,7 +27,8 @@ export class DestinationScene {
   }
   height(x,z){return destinationHeight(this.place.id,x,z);}
   geo(kind){
-    if(!this.geometry.has(kind))this.geometry.set(kind,kind==='box'?new THREE.BoxGeometry(1,1,1):kind==='cone'?new THREE.ConeGeometry(1,1,8):kind==='cylinder'?new THREE.CylinderGeometry(1,1,1,12):new THREE.SphereGeometry(1,12,8));
+    if(!this.geometry.has(kind))this.geometry.set(kind,kind==='box'?new THREE.BoxGeometry(1,1,1):kind==='cone'?new THREE.ConeGeometry(1,1,8):kind==='cylinder'?new THREE.CylinderGeometry(1,1,1,12)
+      :kind==='tuft'?new THREE.ConeGeometry(1,1,4):kind==='pebble'?new THREE.SphereGeometry(1,6,4):new THREE.SphereGeometry(1,12,8));
     return this.geometry.get(kind);
   }
   material(color,glow=false){
@@ -113,8 +114,8 @@ export class DestinationScene {
   flowers(x,z,count=22){
     for(let i=0;i<count;i++){
       const a=i*2.4,r=.25+Math.sqrt(i/count)*1.6,px=x+Math.sin(a)*r,pz=z+Math.cos(a)*r,y=this.height(px,pz);
-      this.shape('cylinder',0x759561,px,y+.18,pz,.022,.35,.022);
-      this.shape('sphere',[0xe3acb3,0xebe0ad,0xa6b1d1][i%3],px,y+.38,pz,.12,.07,.12);
+      this.shape('tuft',0x759561,px,y+.18,pz,.025,.36,.025);
+      this.shape('pebble',[0xe3acb3,0xebe0ad,0xa6b1d1][i%3],px,y+.38,pz,.12,.07,.12);
     }
   }
   village(){
@@ -192,7 +193,7 @@ export class DestinationScene {
     this.shape('box',0xe9d7ad,0,2.5,0,2.15,.25,4.6,tram);
     for(const z of [-1.4,0,1.4])this.shape('box',0xc5dfe2,-1.02,1.8,z,.04,.72,.9,tram);
     for(const x of [-.85,.85])for(const z of [-1.4,1.4]){const wheel=this.shape('cylinder',0x53646a,x,.4,z,.35,.12,.35,tram);wheel.rotation.z=Math.PI/2;}
-    this.dynamic.push(t=>{tram.position.set(32,0,Math.sin(t*.09)*18);});
+    this.compact(tram);this.dynamic.push(t=>{tram.position.set(32,0,Math.sin(t*.09)*18);});
     this.shape('box',0x77969d,28.5,2.1,8,3.4,.2,1.6);this.shape('cylinder',0x637e7d,27.1,1.2,8,.055,2.2,.055);this.object(28.5,8,.8,2.4);
     // Street lighting along the pavements, never in a driving lane.
     for(const z of [18,2,-6,-21])for(const x of [-4.4,4.4])this.lamp(x,z);
@@ -268,6 +269,7 @@ export class DestinationScene {
       this.shape('box',0xfaecc8,0,.4,0,.13,.03,.66,box);
       this.shape('box',0xfaecc8,0,.4,0,.74,.03,.1,box);
       for(const side of [-1,1]){const loop=this.shape('sphere',0xfaecc8,side*.13,.5,0,.15,.09,.08,box);loop.rotation.z=side*.5;}
+      this.compact(box);
       const ring=new THREE.Mesh(new THREE.RingGeometry(.86,.98,30),new THREE.MeshBasicMaterial({color:0xf4dcab,side:THREE.DoubleSide,transparent:true,opacity:.55,depthWrite:false}));
       ring.rotation.x=-Math.PI/2;ring.position.y=.05;group.add(ring);
       const sparkle=this.shape('sphere',0xfff0c4,0,1.35,0,.1,.13,.1,group,true);
@@ -284,6 +286,29 @@ export class DestinationScene {
   nearestGift(position,taken=[]){
     return this.gifts.filter(gift=>!taken.includes(`${this.place.id}/${gift.item.id}`))
       .find(gift=>Math.hypot(gift.x-position.x,gift.z-position.z)<2.6);
+  }
+  // A prop that moves cannot join the static batch, so it merges its own rigid
+  // parts by material instead: a car or a gift box then costs a handful of draw
+  // calls rather than twenty. Child groups are left alone so they can still turn.
+  compact(group){
+    const parts=new Map();
+    for(const mesh of group.children.filter(child=>child.isMesh)){
+      mesh.updateMatrix();
+      const moved=mesh.geometry.clone().applyMatrix4(mesh.matrix),flat=moved.index?moved.toNonIndexed():moved;
+      if(flat!==moved)moved.dispose();
+      if(!parts.has(mesh.material))parts.set(mesh.material,[]);
+      parts.get(mesh.material).push(flat);mesh.removeFromParent();
+    }
+    for(const [material,geometries] of parts){
+      const merged=mergeGeometries(geometries);geometries.forEach(geometry=>geometry.dispose());
+      if(!merged)continue;
+      const mesh=new THREE.Mesh(merged,material);mesh.receiveShadow=true;group.add(mesh);
+    }
+    return group;
+  }
+  wheel(parent,x,side=Math.sign(x)||1){
+    const tyre=this.shape('cylinder',0x35393d,x,0,0,.3,.2,.3,parent);tyre.rotation.z=Math.PI/2;
+    const rim=this.shape('cylinder',0xd3cfc2,x+side*.055,0,0,.17,.12,.17,parent);rim.rotation.z=Math.PI/2;
   }
   // Scenery that travels follows a smoothed route, so it can be checked against
   // the scenery it has to keep clear of.
@@ -310,13 +335,16 @@ export class DestinationScene {
       this.shape('box',0xf6e7c0,side*.46,.5,1.5,.34,.16,.1,g,true);
       this.shape('box',0xc9776a,side*.46,.5,-1.49,.34,.14,.1,g,true);
     }
-    for(const sx of [-1,1])for(const sz of [-1,1]){
-      const hub=new THREE.Group();hub.position.set(sx*.74,.3,sz*1.02);hub.rotation.order='YXZ';g.add(hub);
-      const tyre=this.shape('cylinder',0x35393d,0,0,0,.3,.2,.3,hub);tyre.rotation.z=Math.PI/2;
-      const rim=this.shape('cylinder',0xd3cfc2,sx*.055,0,0,.17,.12,.17,hub);rim.rotation.z=Math.PI/2;
-      wheels.push({hub,front:sz>0});
+    // Front wheels steer on their own pivots; the rear pair rides one axle.
+    for(const side of [-1,1]){
+      const hub=new THREE.Group();hub.position.set(side*.74,.3,1.02);hub.rotation.order='YXZ';g.add(hub);
+      this.wheel(hub,0,side);wheels.push({group:hub,front:true});
     }
+    const axle=new THREE.Group();axle.position.set(0,.3,-1.02);g.add(axle);
+    for(const side of [-1,1])this.wheel(axle,side*.74,side);
+    wheels.push({group:axle,front:false});
     if(parked)this.object(x,z,1.7,1.4);
+    else for(const part of [g,axle,...wheels.filter(w=>w.front).map(w=>w.group)])this.compact(part);
     return {group:g,wheels};
   }
   boat(x,z,size=1,hull=0xd6ae86,sail=0xf5ecd8){
@@ -327,7 +355,7 @@ export class DestinationScene {
     this.shape('cylinder',0x9b7a55,0,1.75*size,.2*size,.075*size,2.9*size,.075*size,g);
     const front=this.shape('cone',sail,0,1.85*size,.95*size,.95*size,2.2*size,.1*size,g);front.rotation.z=-.05;
     const back=this.shape('cone',sail,0,1.6*size,-.6*size,.7*size,1.7*size,.09*size,g);back.rotation.z=.06;
-    return g;
+    return this.compact(g);
   }
   // Traffic, boats and working vehicles give each place somewhere to look.
   vehicles(){
@@ -381,6 +409,7 @@ export class DestinationScene {
       for(let i=0;i<6;i++)this.shape('sphere',[0xd9c07a,0xc8705f,0xa9b47a][i%3],(i%3-1)*.4,1.12,(Math.floor(i/3)-.5)*.8,.32,.24,.32,cart);
       for(const side of [-1,1])for(const z of [-.9,.9]){const wheel=this.shape('cylinder',0x8d6f4e,side*.86,.42,z,.42,.13,.42,cart);wheel.rotation.z=Math.PI/2;}
       this.shape('cylinder',0x9b7a55,0,.62,1.55,.06,1.2,.06,cart).rotation.x=Math.PI/2;
+      this.compact(cart);
       this.ride('land',[[-19,4.6],[0,4.4],[18,5],[19,8.5],[10,9.2],[0,8.8],[-12,9.4],[-19,8.6]],cart,{speed:2.4,turn:2.2,clearance:1.2,lane:{width:2.5,color:0xcdb68d}});
       const wagon=new THREE.Group();wagon.position.set(-4,this.height(-4,-8),-8);wagon.rotation.y=.4;this.static.add(wagon);
       this.shape('box',0xb08a5f,0,.85,0,1.7,.55,3,wagon);
@@ -403,7 +432,7 @@ export class DestinationScene {
       this.shape('box',0xc3dbe0,0,-1.55,.84,1,.8,.05,gondola);
       this.shape('box',0xe8dcc0,0,-.82,0,1.45,.16,1.75,gondola);
       this.shape('cylinder',0x6b6e74,0,-.4,0,.05,.8,.05,gondola);
-      this.shape('box',0x5d6168,0,0,0,.5,.14,.22,gondola);
+      this.shape('box',0x5d6168,0,0,0,.5,.14,.22,gondola);this.compact(gondola);
       // The car hangs from the cable and eases into each station.
       this.ride('air',[[a.x,a.z],[b.x,b.z]],gondola,{loop:false,steps:2,pingPong:true,speed:3.2,turn:.9,roll:.02,
         altitude:rider=>a.y+(b.y-a.y)*(rider.route.length?rider.distance/rider.route.length:0)});
@@ -418,6 +447,7 @@ export class DestinationScene {
         this.shape('box',0x8d6b52,side*.8,.3,0,.12,.14,2.8,glider);
         this.shape('cylinder',0x8d6b52,side*.8,.56,1.32,.1,.52,.1,glider);
       }
+      this.compact(glider);
       this.ride('land',[[-8,12],[4,14],[14,9],[20,3],[16,-3],[6,1],[-3,4],[-10,9]],glider,{speed:2.6,turn:2,clearance:1.2,lane:{width:2.3,color:0xd3dfe6}});
       const sleigh=new THREE.Group();sleigh.position.set(-6,this.height(-6,-9),-9);sleigh.rotation.y=-.35;this.static.add(sleigh);
       this.shape('box',0xb4705f,0,.75,0,1.5,.6,2.4,sleigh);
@@ -484,10 +514,10 @@ export class DestinationScene {
       const a=i*2.39996,r=5+Math.sqrt(i/count)*32,x=Math.sin(a)*r,z=Math.cos(a)*r;
       if(Math.hypot(x,z)>37||nearPath(x,z)||this.layout.blocked?.(x,z)||this.obstacles.some(o=>Math.hypot(x-o.x,z-o.z)<o.radius+.7)||this.place.landmarks.some(p=>Math.hypot(x-p.x,z-p.z)<2.4)||this.gifts.some(g=>Math.hypot(x-g.x,z-g.z)<2.2))continue;
       const y=this.height(x,z);
-      if(this.place.id==='snowlands')this.shape('sphere',i%3?0xeef2ed:0xbdced3,x,y+.08,z,.2,.13,.28);
+      if(this.place.id==='snowlands')this.shape('pebble',i%3?0xeef2ed:0xbdced3,x,y+.08,z,.2,.13,.28);
       else if(this.place.id==='city'){if(i%6===0)this.shape('cylinder',0x9d927e,x,y+.28,z,.23,.5,.23);}
-      else if(this.place.id==='beach'){if(z>5&&i%3===0)for(let j=0;j<3;j++)this.shape('cone',0xa7ac7c,x+j*.08,y+.18,z,.045,.35,.06);}
-      else for(let j=0;j<3;j++){const blade=this.shape('sphere',i%2?0x94ab75:0x819969,x+j*.09,y+.15,z,.035,.19,.06);blade.rotation.z=(j-1)*.35;}
+      else if(this.place.id==='beach'){if(z>5&&i%3===0)for(let j=0;j<3;j++)this.shape('tuft',0xa7ac7c,x+j*.08,y+.18,z,.045,.35,.06);}
+      else for(let j=0;j<3;j++){const blade=this.shape('tuft',i%2?0x94ab75:0x819969,x+j*.09,y+.19,z,.04,.23,.06);blade.rotation.z=(j-1)*.35;}
     }
     if(this.place.id==='village'||this.place.id==='mountains')for(let i=0;i<24;i++){
       const x=Math.sin(i*2.4)*(20+(i%5)*3.2),z=Math.cos(i*2.4)*(19+(i%4)*3.6);
@@ -521,7 +551,10 @@ export class DestinationScene {
   }
   update(dt,night,rain,reduced,memories,position={x:0,z:0},extras={}){
     if(!reduced)this.time+=dt;const t=this.time;
-    const {gifts=[],walkable,paused=false}=extras,step=paused?0:dt;
+    const {gifts=[],walkable,paused=false}=extras;
+    // Animals keep walking under reduced motion, as they do in the forest. The
+    // scenery that travels stills along with the tram, the windmill and the surf.
+    const roaming=paused?0:dt,travelling=paused||reduced?0:dt;
     this.dynamic.forEach(update=>update(t));
     const nearest=[...this.lamps].sort((a,b)=>Math.hypot(a.x-position.x,a.z-position.z)-Math.hypot(b.x-position.x,b.z-position.z));
     this.lights.forEach((light,i)=>{const site=nearest[i];light.position.set(site.x,this.height(site.x,site.z)+2.8,site.z);light.intensity=night*8;});
@@ -532,7 +565,7 @@ export class DestinationScene {
     if(this.snow){this.snow.visible=!reduced;const pos=this.snow.geometry.attributes.position;for(let i=0;i<pos.count;i++){pos.setY(i,((i*.79-t*(.5+rain*.45))%15+15)%15);pos.setX(i,Math.sin(i*8.2)*37+Math.sin(t*.2+i)*.7);}pos.needsUpdate=true;}
     if(this.aurora){this.aurora.visible=night>.05;this.aurora.material.uniforms.night.value=night;this.aurora.material.uniforms.time.value=t;}
     for(const entry of this.riders){
-      entry.rider.update(step);
+      entry.rider.update(travelling);
       const {rider,group,lift=0,bob=0,roll=0,phase}=entry;
       const base=entry.altitude?entry.altitude(rider):this.height(rider.x,rider.z);
       group.position.set(rider.x,base+lift+(reduced?0:Math.sin(t*1.25+phase)*bob),rider.z);
@@ -541,14 +574,14 @@ export class DestinationScene {
     }
     if(this.traffic){
       // Cars obey the signals, keep their distance, and wait for a bear crossing.
-      this.signalCycle.update(step);
-      for(const car of this.traffic)car.vehicle.update(step,this.signalCycle,this.vehicles,position);
+      this.signalCycle.update(travelling);
+      for(const car of this.traffic)car.vehicle.update(travelling,this.signalCycle,this.vehicles,position);
       for(const {vehicle,group,wheels} of this.traffic){
         group.position.set(vehicle.x,this.height(vehicle.x,vehicle.z),vehicle.z);group.rotation.y=vehicle.heading;
         if(reduced)continue;
         for(const wheel of wheels){
-          wheel.hub.rotation.x-=vehicle.speed*step/.3;
-          if(wheel.front)wheel.hub.rotation.y=vehicle.steer;
+          wheel.group.rotation.x-=vehicle.speed*travelling/.3;
+          if(wheel.front)wheel.group.rotation.y=vehicle.steer;
         }
       }
       for(const signal of this.signals){
@@ -568,7 +601,7 @@ export class DestinationScene {
     });
     // Local animals wander on the same collision map the bears walk on.
     if(walkable)for(const animal of this.animals){
-      updateAnimal(animal,step,t,position,walkable,night,reduced);
+      updateAnimal(animal,roaming,t,position,walkable,night,reduced);
       animal.group.position.y=this.height(animal.group.position.x,animal.group.position.z);
     }
   }
