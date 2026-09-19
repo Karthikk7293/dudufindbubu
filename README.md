@@ -32,11 +32,16 @@ The game runs entirely in the browser. The published files include its fonts and
 
 After Dudu leaves his nest, press **G** or use the destination badge to visit
 Honeybell Village, Lumen City, Seashell Bay, Cloudstep Mountains and Starlight
-Snowlands. Find three little memories in each place, use its local map, and
-make destination postcards. Your birthday progress and forest position are
-kept for the return trip. Bubu travels with you after her birthday. Snowlands
-has snowfall and northern lights at night; the other places support day/night
-and rain. Restart and refresh both begin a fresh forest adventure.
+Snowlands. **Each is a playable little world of its own**, as wide as Sunnywood:
+five ribboned **gift boxes** to collect, three landmarks to remember, its own
+**animals to say hello to**, and things happening around you — cars and a tram
+in the city, a sailing boat and a ship out in the bay, a hay wagon in the
+village, a cable car crossing the mountains, and a sleigh in the snow.
+**Bubu comes along on every trip**, before and after her birthday. Destination
+gifts are kept in your travel journal and never touch the birthday bag, so your
+birthday progress and forest position are exactly where you left them when you
+return. Snowlands has snowfall and northern lights at night; the other places
+support day/night and rain. Restart and refresh both begin a fresh adventure.
 
 See [DESTINATIONS-PLAYTEST.md](./DESTINATIONS-PLAYTEST.md) for the destinations,
 controls and verification steps.
@@ -169,7 +174,8 @@ GAME_URL=http://localhost:3002 node tests/exploration.browser.mjs --mobile
 
 These verify that clues never start a route, hidden objectives stay off the map,
 collecting the last gift leaves Dudu where you stopped, and Bubu only appears
-after you walk to her home. They also check discovering destination memories.
+after you walk to her home. They also check discovering destination memories
+and collecting destination gift boxes.
 
 Browser checks run against the dev server on port 3000 and use Google Chrome at `/usr/bin/google-chrome`. Override `GAME_URL` or `CHROME_PATH` as needed. Screenshots are saved to `test-results/`. The full browser suite checks the departure, manual exploration and letter collection, all-gifts arrival gate, candle wish and birthday party, walking together, reset on refresh, restart, fullscreen layout, zoom, map and bag menus, sound, atmosphere, and real tablet pinch and joystick events. The shorter interaction suite skips the gift and ending checkpoints. The refinements check focuses on the picnic interaction, pausing the birthday party, walking together, refresh behaviour, reduced motion, lamb visuals, and tablet controls. The character check renders front and three-quarter previews, then checks the refined bears during their birthday and companion walk. Logic tests cover save migration, all-gift gating, gift selection and proximity, safe companion restoration, following around trees and across both bridges without teleporting, zoom limits, collision, and pathfinding.
 

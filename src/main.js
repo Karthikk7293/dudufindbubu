@@ -129,7 +129,7 @@ async function travelTo(id){
     $('journal-away').hidden=!world.away;
     audio.setDestination(world.travel.current.id);audio.setRain(weatherMode==='rain'&&world.travel.current.id!=='snowlands');updateWeatherControls();
     world.update(0,false,false,true);updateUI();
-    toast(world.away?`${world.travel.current.name} · Three little memories to find.`:'Back to Sunnywood. Your birthday adventure is right where you left it.',5000);
+    toast(world.away?`${world.travel.current.name} · ${world.travel.current.gifts.length} gift boxes, ${world.travel.current.landmarks.length} little memories, and friends to meet.`:'Back to Sunnywood. Your birthday adventure is right where you left it.',5000);
   }catch(error){console.error('Destination could not load',error);toast('That journey could not load. Your adventure is safe here; please try again.',6500);}
   finally{travelling=false;$('travel-loading').hidden=true;audio.setPaused(isPaused());world.needsRender=true;lastTime=performance.now();$('world').focus({preventScroll:true});}
 }
@@ -290,9 +290,15 @@ $('start-button').addEventListener('click',start);
 function checkNearby(){
   if(!playing||isPaused())return;
   if(world.away){
-    const memory=world.travel.nearby();nearby=memory?{id:'destination-memory',memory}:state.completed&&Math.hypot(state.position.x-world.bubu.position.x,state.position.z-world.bubu.position.z)<3.2?{id:'bubu'}:null;
+    // Gift boxes come first, then landmarks, local animals, and Bubu herself.
+    const site=world.travel.nearbyGift(),memory=world.travel.nearby();
+    nearby=site?{id:'destination-gift',site}:memory?{id:'destination-memory',memory}:null;
+    if(!nearby){const animal=world.travel.nearbyFriend();if(animal)nearby={id:'destination-friend',animal};}
+    if(!nearby&&world.bubu.visible&&Math.hypot(state.position.x-world.bubu.position.x,state.position.z-world.bubu.position.z)<3.2)nearby={id:'bubu'};
     $('interact-button').classList.toggle('hidden',!nearby);
-    if(nearby)$('interact-label').textContent=memory?`Remember ${memory.name.toLowerCase()}`:'Share a little moment';
+    if(nearby)$('interact-label').textContent=nearby.id==='destination-gift'?`Pick up the ${site.item.short.toLowerCase()}`
+      :nearby.id==='destination-memory'?`Remember ${memory.name.toLowerCase()}`
+      :nearby.id==='destination-friend'?`Say hello to the ${nearby.animal.kind}`:'Share a little moment';
     $('touch-interact').setAttribute('aria-label',nearby?$('interact-label').textContent:'Explore a nearby landmark');return;
   }
   if(world.story==='moon'){
@@ -312,7 +318,26 @@ function interact(){
   if(!playing||isPaused())return;
   if(world.story==='moon'){if(world.moonJourney.descend()){haptics.pulse('tap');hide('interact-button');keys.clear();}return;}
   if(world.cinematic)return;
-  checkNearby();if(!nearby){toast('Wander close to a gift, a forest friend, or Bubu, then say hello.',3000);return;}
+  checkNearby();if(!nearby){toast(world.away?'Wander close to a gift box, a landmark, or a little friend, then say hello.':'Wander close to a gift, a forest friend, or Bubu, then say hello.',3000);return;}
+  if(nearby.id==='destination-gift'){
+    stopWalking();const site=nearby.site;
+    if(world.travel.collectGift(site)){
+      haptics.pulse('gift');audio.collect();
+      const total=world.travel.giftCount(),all=world.travel.current.gifts.length;
+      speak(site.item.note);
+      toast(`${site.item.name} · ${total} / ${all} from ${world.travel.current.name} ♡`,4500);
+      journal.render(state,adventure);
+    }
+    checkNearby();return;
+  }
+  if(nearby.id==='destination-friend'){
+    const animal=nearby.animal;stopWalking();
+    if(world.travel.greetAnimal(animal)){
+      haptics.pulse('friend');audio.chirp();speak('“Hello, little friend.” ♡');
+      toast(`A ${animal.kind} in ${world.travel.current.name}. A little hello. ♡`);
+    }
+    checkNearby();return;
+  }
   if(nearby.id==='destination-memory'){
     stopWalking();const item=nearby.memory,first=world.travel.remember(item);
     world.dudu.userData.expression.react('delighted',2.5);world.reactions.emit(world.dudu.position,world.reducedMotion);
@@ -335,7 +360,7 @@ function interact(){
     checkNearby();return;
   }
   if(nearby.id==='bubu'){
-    if(state.completed){route=[];keys.clear();resetJoystick();world.shareMoment();haptics.pulse('friend');audio.chirp(true);speak(['“Can we stay here a little longer?” ♡','“You’re my favorite adventure, Dudu.”','“Best. Birthday. Ever.”'][Math.floor(Math.random()*3)],'bubu');return;}
+    if(state.completed||world.away){route=[];keys.clear();resetJoystick();world.shareMoment();haptics.pulse('friend');audio.chirp(true);speak(['“Can we stay here a little longer?” ♡','“You’re my favorite adventure, Dudu.”','“Best. Birthday. Ever.”'][Math.floor(Math.random()*3)],'bubu');return;}
     if(canCelebrate(state)){
       route=[];keys.clear();joystick={x:0,y:0};$('joystick-knob').style.transform='';world.celebrate();haptics.pulse('celebrate');
       hide('interact-button');hide('speech');

@@ -28,11 +28,20 @@ try{
     if(!await page.locator('#travel-dialog').isVisible())await page.locator('#travel-button').click();
     await page.locator(`[data-destination="${place.id}"]`).click();
     await page.waitForFunction(id=>{const s=window.__dudu.snapshot();return s.destination.id===id&&!s.travelling;},place.id);
-    let state=await snap();assert.equal(state.destination.forestVisible,false);assert.equal(state.destination.sceneCount,1);assert.equal(state.bubuVisible,together);assert.deepEqual(state.state.collected,before.state.collected);
+    let state=await snap();assert.equal(state.destination.forestVisible,false);assert.equal(state.destination.sceneCount,1);assert.deepEqual(state.state.collected,before.state.collected);
+    assert.equal(state.bubuVisible,true,'Bubu comes along to every destination');assert.equal(state.destination.giftSites.length,place.gifts.length);
     await chooseGroundPoint(page,place.landmarks[0],{touch:!desktop});
     await page.waitForFunction(()=>{const s=window.__dudu.snapshot();return s.destination.landmarks.some(l=>Math.hypot(s.position.x-l.x,s.position.z-l.z)<2.3);});
     await page.keyboard.press('e');await page.waitForFunction(id=>window.__dudu.snapshot().destination.memories.some(m=>m.startsWith(id+'/')),place.id);
     const memoryCount=(await snap()).destination.memories.length;await page.keyboard.press('e');assert.equal((await snap()).destination.memories.length,memoryCount);
+    // Every destination hides gift boxes of its own, kept apart from the birthday bag.
+    const here=await snap(),site=[...here.destination.giftSites].sort((a,b)=>Math.hypot(a.x-here.position.x,a.z-here.position.z)-Math.hypot(b.x-here.position.x,b.z-here.position.z))[0];
+    await chooseGroundPoint(page,site,{touch:!desktop});
+    await page.waitForFunction(target=>{const s=window.__dudu.snapshot();return Math.hypot(s.position.x-target.x,s.position.z-target.z)<2.3;},site);
+    await page.keyboard.press('e');await page.waitForFunction(id=>window.__dudu.snapshot().destination.gifts.some(key=>key.startsWith(id+'/')),place.id);
+    const giftCount=(await snap()).destination.gifts.length;await page.keyboard.press('e');
+    assert.equal((await snap()).destination.gifts.length,giftCount,'a gift box is kept only once');
+    assert.deepEqual((await snap()).state.collected,before.state.collected,'travel gifts never touch the birthday bag');
     if(together){assert.equal((await snap()).following,true);assert.ok(Math.hypot((await snap()).bubuPosition.x-state.bubuPosition.x,(await snap()).bubuPosition.z-state.bubuPosition.z)>.4);}
     await page.locator('#play-map').click();assert.equal(await page.locator('#map-title').textContent(),place.name);await page.locator('#map-dialog [data-close]').click();
     await page.keyboard.press('x');await page.waitForFunction(()=>window.__dudu.snapshot().photo.active);await page.screenshot({path:`test-results/destination-${place.id}-walk-${together?'together':desktop?'desktop':'mobile'}.png`,scale:'css'});await page.locator('#photo-exit').click();
@@ -48,12 +57,12 @@ try{
       assert.equal(await page.locator('#pause-weather').getAttribute('aria-label'),'Lighter snowfall');assert.equal((await snap()).umbrellas[0].visible,false);
       await page.locator('#pause-photo').click();await page.screenshot({path:`test-results/destination-snowlands-night-${together?'together':'solo'}.png`,scale:'css'});await page.locator('#photo-exit').click();
     }
-    console.log(`${place.name}: travel, memory, local map and paused postcard passed`);
+    console.log(`${place.name}: travel, memory, gift box, local map and paused postcard passed`);
   }
   await page.locator('#travel-button').click();await page.locator('[data-destination="forest"]').click();await page.waitForFunction(()=>{const s=window.__dudu.snapshot();return s.destination.id==='forest'&&!s.travelling;});
   const returned=await snap();assert.deepEqual(returned.state.position,before.state.position);assert.deepEqual(returned.state.collected,before.state.collected);assert.equal(returned.state.completed,before.state.completed);assert.equal(returned.bubuVisible,before.bubuVisible);assert.equal(returned.destination.forestVisible,true);assert.equal(returned.destination.sceneCount,0);assert.ok(returned.resources.geometries<=before.resources.geometries+20,'Destination geometry is released on return');
   await page.locator('#travel-button').click();await page.locator('[data-destination="city"]').click();await page.waitForFunction(()=>window.__dudu.snapshot().destination.id==='city'&&!window.__dudu.snapshot().travelling);
-  await page.locator('#play-pause').click();await page.locator('#restart-button').click();assert.equal((await snap()).destination.id,'forest');assert.equal((await snap()).destination.memories.length,0);assert.equal((await snap()).state.collected.length,0);assert.equal((await snap()).bubuVisible,false);
+  await page.locator('#play-pause').click();await page.locator('#restart-button').click();assert.equal((await snap()).destination.id,'forest');assert.equal((await snap()).destination.memories.length,0);assert.equal((await snap()).destination.gifts.length,0);assert.equal((await snap()).state.collected.length,0);assert.equal((await snap()).bubuVisible,false);
   await page.reload();await page.waitForFunction(()=>window.__dudu?.snapshot().ready);assert.equal((await snap()).destination.id,'forest');assert.deepEqual((await snap()).destination.visited,['forest']);assert.deepEqual(errors,[]);
   console.log('Forest progress restored; restart and refresh reset destinations; no browser errors.');
 }finally{await browser.close();}

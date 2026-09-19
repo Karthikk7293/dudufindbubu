@@ -1,4 +1,4 @@
-import { DESTINATIONS } from './destinations.js';
+import { DESTINATIONS, destinationTotals, travelGiftCount } from './destinations.js';
 
 export function destinationArt(place){
   const sky=`#${place.sky.toString(16).padStart(6,'0')}`,ground=`#${place.ground.toString(16).padStart(6,'0')}`;
@@ -15,12 +15,16 @@ export function destinationArt(place){
 }
 
 export function renderDestinations(travel,canTravel){
-  const total=travel.log.memories.length;
-  document.getElementById('travel-progress').textContent=`${travel.log.visited.length} / 6 destinations · ${total} / 15 little memories`;
+  const total=travel.log.memories.length,gifts=travel.log.gifts.length,totals=destinationTotals();
+  document.getElementById('travel-progress').textContent=`${travel.log.visited.length} / ${DESTINATIONS.length} destinations · ${gifts} / ${totals.gifts} gift boxes · ${total} / ${totals.memories} little memories`;
   document.getElementById('travel-cards').innerHTML=DESTINATIONS.map(place=>{
-    const current=travel.current.id===place.id,visited=travel.log.visited.includes(place.id),count=travel.log.memories.filter(key=>key.startsWith(place.id+'/')).length;
-    return `<article class="destination-card ${current?'is-current':''}" style="--destination-accent:${place.color}"><div class="destination-art">${destinationArt(place)}<span>${current?'YOU ARE HERE':visited?'A FAMILIAR PLACE':place.kind.toUpperCase()}</span></div><div class="destination-copy"><small>${place.tag}</small><h3>${place.name}</h3><p>${place.description}</p><span class="destination-stamps">${place.id==='forest'?'The birthday adventure':`${count} / 3 memories collected`}</span><button data-destination="${place.id}" ${current||!canTravel?'disabled':''}>${current?'Enjoy this little place':place.id==='forest'?'Return to the birthday trail ↗':`Visit ${place.kind.toLowerCase()} ↗`}</button></div></article>`;
+    const current=travel.current.id===place.id,visited=travel.log.visited.includes(place.id),count=travel.log.memories.filter(key=>key.startsWith(place.id+'/')).length,found=travelGiftCount(travel.log,place.id);
+    return `<article class="destination-card ${current?'is-current':''}" style="--destination-accent:${place.color}"><div class="destination-art">${destinationArt(place)}<span>${current?'YOU ARE HERE':visited?'A FAMILIAR PLACE':place.kind.toUpperCase()}</span></div><div class="destination-copy"><small>${place.tag}</small><h3>${place.name}</h3><p>${place.description}</p><span class="destination-stamps">${place.id==='forest'?'The birthday adventure':`${found} / ${place.gifts.length} gifts · ${count} / ${place.landmarks.length} memories`}</span><button data-destination="${place.id}" ${current||!canTravel?'disabled':''}>${current?'Enjoy this little place':place.id==='forest'?'Return to the birthday trail ↗':`Visit ${place.kind.toLowerCase()} ↗`}</button></div></article>`;
   }).join('');
-  document.getElementById('travel-note').textContent=canTravel?'Your gifts stay in your bag. Bubu travels with you after her birthday.':'Travel is ready once Dudu has left home and the current scene has finished.';
-  document.getElementById('travel-memories').innerHTML=total?DESTINATIONS.flatMap(place=>place.landmarks.filter(item=>travel.log.memories.includes(`${place.id}/${item.id}`)).map(item=>`<article><small>${place.name}</small><h3>${item.name}</h3><p>${item.memory}</p></article>`)).join(''):'<p>Look for the little golden diamonds in each destination. Get close and tap the heart, or press E, to keep a memory.</p>';
+  document.getElementById('travel-note').textContent=canTravel?'Your birthday gifts stay safe in Sunnywood. Bubu comes along to every destination, and every place has its own gift boxes, landmarks and little friends.':'Travel is ready once Dudu has left home and the current scene has finished.';
+  const kept=DESTINATIONS.flatMap(place=>[
+    ...place.landmarks.filter(item=>travel.log.memories.includes(`${place.id}/${item.id}`)).map(item=>`<article><small>${place.name}</small><h3>${item.name}</h3><p>${item.memory}</p></article>`),
+    ...place.gifts.filter(item=>travel.log.gifts.includes(`${place.id}/${item.id}`)).map(item=>`<article><small>${place.name} · gift box</small><h3>${item.name}</h3><p>${item.note}</p></article>`),
+  ]).join('');
+  document.getElementById('travel-memories').innerHTML=kept||'<p>Every destination hides gift boxes with ribbons and little golden diamonds. Get close and tap the heart, or press E, to keep one.</p>';
 }

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
-import { DESTINATIONS, destinationLayout, destinationHeight, freshTravel, rememberLandmark } from '../src/destinations.js';
+import { DESTINATIONS, DESTINATION_RADIUS, destinationLayout, destinationHeight, destinationTotals, freshTravel, rememberLandmark, collectTravelGift, travelGiftCount } from '../src/destinations.js';
 import { DestinationScene } from '../src/destination-scene.js';
 import { DestinationTravel } from '../src/destination-travel.js';
 import { freshState, findPath, isWalkable, moveWithCollisions } from '../src/game-state.js';
@@ -18,14 +18,15 @@ test('every destination has reachable memories and safe entry points, independen
       for(const next of path)moveWithCollisions(position,next.x-position.x,next.z-position.z,scene.obstacles,scene.layout);
       assert.ok(Math.hypot(position.x-landmark.x,position.z-landmark.z)<.01,`${place.id}: collision-free path to ${landmark.id}`);
     }
-    assert.ok(scene.static.children.length<45,'Static details are batched');
+    assert.ok(scene.static.children.length<60,'Static details are batched by material, not left as one mesh per prop');
     scene.dispose();
   }
   assert.equal(isWalkable(-8.5,2,[],destinationLayout('village')),true);
   assert.equal(isWalkable(-8.5,2,[]),false,'The forest retains its pond');
   assert.equal(isWalkable(0,-12,[],destinationLayout('beach')),false);
   assert.equal(isWalkable(13,-11,[],destinationLayout('snowlands')),false);
-  assert.equal(isWalkable(28,0,[],destinationLayout('city')),false);
+  assert.equal(isWalkable(DESTINATION_RADIUS-2,0,[],destinationLayout('city')),true,'the wider island is walkable');
+  assert.equal(isWalkable(DESTINATION_RADIUS+1,0,[],destinationLayout('city')),false);
 });
 
 test('memories are local, unique, separate from gifts, and cleared for a new adventure',()=>{
@@ -61,7 +62,8 @@ test('travel restores the exact forest state, limits active scenes, and rolls ba
     const world=travelWorld(completed),travel=new DestinationTravel(world),original=structuredClone(world.state),obstacles=world.obstacles;
     assert.equal(await travel.visit('not-a-place'),false);
     world.cinematic=true;assert.equal(await travel.visit('city'),false);world.cinematic=false;
-    assert.equal(await travel.visit('village'),true);assert.equal(travel.forestRoot.visible,false);assert.equal(world.bubu.visible,completed);assert.ok(world.companion||!completed);
+    // Bubu comes along to every destination, whether or not the birthday has happened.
+    assert.equal(await travel.visit('village'),true);assert.equal(travel.forestRoot.visible,false);assert.equal(world.bubu.visible,true);assert.ok(world.companion);
     const old=travel.active;world.state.position={x:2,z:18};await travel.visit('beach');assert.equal(old.group.parent,null);
     assert.equal(travel.snapshot().sceneCount,1);assert.deepEqual(world.state.collected,original.collected);
     world.renderer.compileAsync=async()=>{throw Error('GPU warmup failed');};
@@ -77,4 +79,38 @@ test('destination animation freezes while paused and reduced motion hides fallin
   const before=snow.snow.geometry.attributes.position.array.slice();snow.update(0,1,0,false,[]);assert.deepEqual(snow.snow.geometry.attributes.position.array,before);
   assert.equal(snow.aurora.visible,true);snow.update(1,1,1,true,[]);assert.equal(snow.snow.visible,false);assert.equal(snow.time,1);
   snow.dispose();
+});
+
+test('every destination gift box sits on open ground and can be walked to',()=>{
+  for(const place of DESTINATIONS.slice(1)){
+    const scene=new DestinationScene(place,true);
+    assert.equal(scene.gifts.length,place.gifts.length,place.id+' builds every gift box');
+    for(const site of scene.gifts){
+      assert.ok(isWalkable(site.x,site.z,scene.obstacles,scene.layout),`${place.id}: ${site.item.id} stands on open ground`);
+      assert.ok(findPath(place.spawn,site,scene.obstacles,scene.layout).length,`${place.id}: ${site.item.id} is reachable`);
+    }
+    assert.equal(scene.animals.length,place.friends.length,place.id+' has its own little residents');
+    for(const animal of scene.animals)
+      assert.ok(isWalkable(animal.group.position.x,animal.group.position.z,scene.obstacles,scene.layout),`${place.id}: the ${animal.kind} starts on open ground`);
+    scene.dispose();
+  }
+});
+
+test('travel gifts are local, unique and separate from the birthday bag',()=>{
+  const log=freshTravel(),place=DESTINATIONS[2],scene=new DestinationScene(place,true),site=scene.gifts[0];
+  assert.equal(collectTravelGift(log,place.id,site,{x:site.x+9,z:site.z}),false,'out of reach');
+  assert.equal(collectTravelGift(log,place.id,null,site),false,'nothing to pick up');
+  assert.equal(collectTravelGift(log,place.id,site,site),true);
+  assert.equal(collectTravelGift(log,place.id,site,site),false,'a gift is kept only once');
+  assert.deepEqual(log.gifts,[`${place.id}/${site.item.id}`]);
+  assert.equal(travelGiftCount(log,place.id),1);assert.equal(travelGiftCount(log,'village'),0);
+  assert.equal(freshState().collected.length,0,'the birthday bag is untouched');
+  assert.equal(freshTravel().gifts.length,0);
+  const totals=destinationTotals();
+  assert.equal(totals.gifts,DESTINATIONS.reduce((count,item)=>count+item.gifts.length,0));
+  assert.ok(totals.gifts>=25,'each destination carries a handful of gift boxes');
+  // Collected boxes disappear; the rest stay out to be found.
+  scene.update(.1,0,0,false,[],place.spawn,{gifts:log.gifts});
+  assert.equal(scene.gifts[0].group.visible,false);assert.equal(scene.gifts[1].group.visible,true);
+  scene.dispose();
 });

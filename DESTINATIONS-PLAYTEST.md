@@ -11,40 +11,52 @@ uses that port. Turn a phone sideways. This session uses port 3002.
 After Dudu leaves home, press **G**, use the destination badge below the journal,
 or choose **Visit another destination** in the pause menu or local map.
 
-| Destination | Things to see |
-| --- | --- |
-| Sunnywood Forest | The original birthday hunt, animals, picnic and Moonwatch nest |
-| Honeybell Village | Cottages, flower market, apple orchard and turning windmill |
-| Lumen City | Pastel buildings, glowing windows, clock tower, pocket garden and moving tram |
-| Seashell Bay | Palms, waves, shells, parasols, lighthouse and beach picnic |
-| Cloudstep Mountains | Rising trails, snowy peaks, alpine flowers and a mountain camp |
-| Starlight Snowlands | Snowbear, frosted pines, lantern cabins, frozen lake and northern lights at night |
+| Destination | Things to see | Who lives there | Moving about |
+| --- | --- | --- | --- |
+| Sunnywood Forest | The original birthday hunt, picnic and Moonwatch nest | Rabbits, sheep, deer, foxes | Birds, butterflies |
+| Honeybell Village | Cottages, flower market, apple orchard, turning windmill, outer lanes | Sheep, rabbits, a deer | A loaded hay wagon |
+| Lumen City | Pastel towers, glowing windows, clock tower, pocket garden, wider blocks | Garden rabbits, city foxes | Four cars on the avenues, the tram, parked cars |
+| Seashell Bay | Palms, waves, shells, parasols, lighthouse, beach hut | Rabbits, a fox, a deer | A sailing boat, a ship offshore, a beached rowboat |
+| Cloudstep Mountains | Rising trails, snowy peaks, alpine flowers, camp, boulders | Deer, sheep, a fox | A cable car crossing the valley |
+| Starlight Snowlands | Snowbear, frosted pines, lantern cabins, frozen lake, aurora at night | Foxes, rabbits, a deer | A wooden sleigh |
 
-The five new destinations are optional exploration trips. The birthday gifts
-and celebration remain in Sunnywood. Each new place has three golden memory
-markers: explore to find them, get close, then press **E** or tap the heart. Read
-your collected memories in the destination menu's **Your travel memories**
-section, also reachable from the journal. The map records memories after you
-collect them; it does not reveal their locations in advance.
+Each of the five destinations is now as playable as the forest, on an island of
+the same size. Every place holds:
+
+- **Five gift boxes** with ribbons and a golden ring. Explore to find them, get
+  close, then press **E** or tap the heart. They are recorded in your travel
+  journal and are completely separate from the eight birthday gifts.
+- **Three golden memory markers**, collected the same way.
+- **Its own animals.** Walk up to one and say hello, exactly as in the forest.
+- **Bubu**, who now travels with you whether or not the birthday has happened.
+
+The map records gift boxes and memories after you collect them; it does not
+reveal their locations in advance. Read everything you have kept in the
+destination menu's **Your travel memories** section.
 
 ## Checks to try
 
 1. Collect a forest gift, travel, then return. The gift bag, birthday stage and
-   Dudu's forest position should be preserved. Visiting landmarks never reveals
-   Bubu early or awards birthday gifts.
+   Dudu's forest position should be preserved. Collecting destination gift boxes
+   never reveals Bubu early or adds to the birthday bag.
 2. Walk, tap a route, orbit and zoom in each place. Open **M** for that place's
    map. The ocean and frozen lake are boundaries; mountains have a rising trail.
-3. Find a memory twice: the second visit should not create a duplicate.
-4. Pause, then change day/night or weather. Snowlands uses snowfall instead of
+3. Find a memory twice: the second visit should not create a duplicate. The same
+   applies to gift boxes — a collected box disappears and cannot be taken again.
+4. Wander the outer ring of each place: more houses, towers, palms, pines and
+   paths, with gift boxes out there too. Watch the city traffic, the boats in the
+   bay, the cable car and the windmill keep moving while you explore.
+5. Pause, then change day/night or weather. Snowlands uses snowfall instead of
    rain. City windows and village lamps light up at night.
-5. Use **X** to make a postcard. The scene pauses, and the destination appears
+6. Use **X** to make a postcard. The scene pauses, and the destination appears
    on the card and in its download filename.
-6. Finish Bubu's birthday in the forest, then travel. Both bears should move
-   together in every destination. Before the birthday, Bubu stays home.
-7. Return to the forest and try the Moonwatch ladder. Travel is unavailable
+7. Travel before the birthday: Bubu should still come along and follow you.
+   After the birthday she behaves the same way. In the forest she remains behind
+   her own door until all eight gifts are collected.
+8. Return to the forest and try the Moonwatch ladder. Travel is unavailable
    during departure, arrival, birthday and ladder scenes.
-8. Restart while away, then refresh. Both should start a fresh forest adventure,
-   with an empty bag and no destination memories.
+9. Restart while away, then refresh. Both should start a fresh forest adventure,
+   with an empty bag and no destination gifts or memories.
 
 ## Automated checks
 
@@ -61,10 +73,11 @@ PREVIEW_URL=http://localhost:4174 npm run test:deployment
 ```
 
 The browser scripts use local Chrome and software-rendering synchronization.
-They test real travel controls, manual exploration and a memory in each destination, maps, photo export,
-companion movement, restoration, restart and refresh. Unit tests check routes
-to all 15 landmarks, navigation boundaries, deduplication, scene disposal,
-failed-load recovery and frozen/reduced-motion animation. Physical phone
+They test real travel controls, manual exploration, a memory and a gift box in each destination, maps,
+photo export, companion movement, restoration, restart and refresh. Unit tests
+check routes to all 15 landmarks and all 25 gift boxes, that every gift box and
+animal starts on open ground, navigation boundaries, deduplication, scene
+disposal, failed-load recovery and frozen/reduced-motion animation. Physical phone
 performance and haptic feel still need device testing.
 
 Only one additional destination scene exists at a time. Its GPU resources are
