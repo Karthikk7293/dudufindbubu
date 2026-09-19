@@ -4,6 +4,7 @@ import { destinationHeight, destinationLayout } from './destinations.js';
 import { createAnimal, disposeAnimal, updateAnimal } from './wildlife.js';
 import { isWalkable } from './game-state.js';
 import { RoadNetwork, TrafficLights, Vehicle } from './city-traffic.js';
+import { Route, RouteRider } from './scenery-route.js';
 
 // Scenery is built only for the destination being visited. Static details share
 // material batches; moving props and memory markers remain separate.
@@ -11,10 +12,10 @@ export class DestinationScene {
   constructor(place,mobile=false){
     this.place=place;this.mobile=mobile;this.group=new THREE.Group();this.static=new THREE.Group();this.group.add(this.static);
     this.obstacles=[];this.cameraObstacles=[];this.markers=[];this.lamps=[];this.dynamic=[];this.materials=new Map();this.geometry=new Map();this.paths=[];
-    this.gifts=[];this.animals=[];this.signals=[];this.signalSkins=new Map();this.traffic=null;
+    this.gifts=[];this.animals=[];this.signals=[];this.signalSkins=new Map();this.traffic=null;this.routes=[];this.riders=[];
     this.layout=destinationLayout(place.id);this.time=0;
     this.ground=this.makeGround();
-    if(place.id!=='city')this.path([[0,33],[0,23],[0,12],[0,3],[0,-8],[0,-19],[0,-30]],2.6);
+    if(place.id!=='city')this.path(place.id==='beach'?[[0,33],[0,24],[0,14],[0,5],[0,-5]]:[[0,33],[0,23],[0,12],[0,3],[0,-8],[0,-19],[0,-30]],2.6);
     if(place.id==='village')this.village();
     if(place.id==='city')this.city();
     if(place.id==='beach')this.beach();
@@ -62,11 +63,11 @@ export class DestinationScene {
     this.static.add(new THREE.Mesh(skirt,this.material(this.place.id==='snowlands'?0xb9ccd3:0x938669)));
     return ground;
   }
-  path(points,width=2,color){
+  path(points,width=2,color,lift=.025){
     this.paths.push({points,width});const curve=new THREE.CatmullRomCurve3(points.map(([x,z])=>new THREE.Vector3(x,0,z))),p=[],index=[];
     for(let i=0;i<=90;i++){
       const at=curve.getPoint(i/90),side=curve.getTangent(i/90).cross(new THREE.Vector3(0,1,0)).normalize().multiplyScalar(width/2);
-      for(const sign of [1,-1]){const x=at.x+side.x*sign,z=at.z+side.z*sign;p.push(x,this.height(x,z)+.025,z);}
+      for(const sign of [1,-1]){const x=at.x+side.x*sign,z=at.z+side.z*sign;p.push(x,this.height(x,z)+lift,z);}
       if(i<90){const a=i*2;index.push(a,a+2,a+1,a+1,a+2,a+3);}
     }
     const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.Float32BufferAttribute(p,3));geo.setIndex(index);geo.computeVertexNormals();
@@ -130,7 +131,7 @@ export class DestinationScene {
     const sails=new THREE.Group();sails.position.set(x,y+3.8,z+1.5);this.group.add(sails);
     for(let i=0;i<4;i++){const arm=new THREE.Group();arm.rotation.z=i*Math.PI/2;this.shape('box',0xf2e8cc,0,1.45,0,.58,2.8,.1,arm);sails.add(arm);}this.dynamic.push(t=>sails.rotation.z=t*.18);this.object(x,z,1.9,6.5);
     for(const [x,z]of [[12,-16],[17,-12],[19,-19],[9,-20]]){this.tree(x,z,1.15);for(let i=0;i<5;i++)this.shape('sphere',0xbc7660,x+Math.sin(i*2)*1.1,3.55,z+Math.cos(i*2)*1.1,.16);}
-    this.flowers(-13,-10);this.flowers(10,6);this.bench(-3,9,.2);[-20,-9,9,20].forEach(x=>this.lamp(x,5.8));
+    this.flowers(-13,-10);this.flowers(10,6);this.bench(-3,12.5,.2);[-22,-9,9,22].forEach(x=>this.lamp(x,7));
   }
   crossing(x,z,along){
     // Zebra stripes run the way people walk, repeating along the road.
@@ -205,9 +206,9 @@ export class DestinationScene {
   beach(){
     this.path([[-16,0],[-8,4],[0,7],[13,7],[21,12]],1.65,0xeedeb4);
     const ocean=new THREE.Mesh(new THREE.PlaneGeometry(220,130),new THREE.MeshStandardMaterial({color:0x5cabb5,roughness:.32,metalness:.08}));ocean.rotation.x=-Math.PI/2;ocean.position.set(0,.07,-74);this.group.add(ocean);
-    for(let i=0;i<7;i++){
-      const wave=new THREE.Mesh(new THREE.PlaneGeometry(130,.16+i*.12),new THREE.MeshBasicMaterial({color:0xd5efe1,transparent:true,opacity:.45,depthWrite:false}));wave.rotation.x=-Math.PI/2;this.group.add(wave);
-      this.dynamic.push(t=>{wave.position.set(Math.sin(t*.35+i)*2,.085+i*.002,-10.7-i*3+Math.sin(t*.5+i)*.65);wave.material.opacity=.24+Math.sin(t*.5+i)*.14;});
+    for(let i=0;i<5;i++){
+      const wave=new THREE.Mesh(new THREE.PlaneGeometry(74-i*5,.2+i*.14),new THREE.MeshBasicMaterial({color:0xdff2e6,transparent:true,opacity:.3,depthWrite:false}));wave.rotation.x=-Math.PI/2;this.group.add(wave);
+      this.dynamic.push(t=>{wave.position.set(Math.sin(t*.35+i)*2.2,.085+i*.002,-10.6-i*2.1+Math.sin(t*.5+i)*.7);wave.material.opacity=.1+Math.max(0,Math.sin(t*.5+i))*.16;});
     }
     [[-18,11,1.2],[-10,15,.95],[8,14,1.3],[20,0,1.15],[19,14,.9]].forEach(p=>this.palm(...p));
     for(const [x,z,color]of [[8,2,0xe5b087],[17,8,0x87bcc0],[-8,7,0xd9a3a6]]){
@@ -284,6 +285,15 @@ export class DestinationScene {
     return this.gifts.filter(gift=>!taken.includes(`${this.place.id}/${gift.item.id}`))
       .find(gift=>Math.hypot(gift.x-position.x,gift.z-position.z)<2.6);
   }
+  // Scenery that travels follows a smoothed route, so it can be checked against
+  // the scenery it has to keep clear of.
+  ride(kind,points,group,options={}){
+    const route=new Route(points,options),rider=new RouteRider(route,options);
+    if(options.lane)this.path(route.loop?[...points,points[0],points[1]]:points,options.lane.width??2.4,options.lane.color,.034);
+    this.routes.push({kind,route,clearance:options.clearance??.8});
+    this.riders.push({...options,rider,group,phase:this.riders.length*1.7});
+    return rider;
+  }
   car(color,x=0,z=0,parked=false){
     const g=new THREE.Group();g.position.set(x,this.height(x,z),z);(parked?this.static:this.group).add(g);
     const wheels=[];
@@ -343,14 +353,17 @@ export class DestinationScene {
         this.vehicles.push(vehicle);this.traffic.push({vehicle,group,wheels});
       });
       // Two cars parked on the pavement, clear of every lane and doorway.
-      for(const [x,z,color,turn] of [[5.2,-19,0xbfa9c0,Math.PI],[-5.2,-6,0x9fb8ae,0]])
+      for(const [x,z,color,turn] of [[5.2,-19,0xbfa9c0,Math.PI],[-4.6,-4,0x9fb8ae,0]])
         this.car(color,x,z,true).group.rotation.y=turn;
     }
     if(id==='beach'){
+      // Both craft keep to open water, well beyond the tide line.
       const sailing=this.boat(0,-19,1);
-      this.dynamic.push(t=>{sailing.position.set(Math.sin(t*.06)*20,.08,-19+Math.cos(t*.06)*3);sailing.rotation.y=Math.cos(t*.06)*.6+.3;sailing.rotation.z=Math.sin(t*.9)*.03;});
+      this.ride('water',[[-22,-18],[-6,-15],[10,-17],[22,-22],[10,-27],[-8,-26]],sailing,
+        {speed:2.2,turn:1.1,altitude:()=>0,lift:.08,bob:.05,roll:.035,clearance:2.4});
       const ship=this.boat(-24,-33,1.9,0xc79a74,0xeee2c9);
-      this.dynamic.push(t=>{ship.position.set(-24+Math.sin(t*.03)*14,.08,-33);ship.rotation.y=Math.PI/2+Math.sin(t*.03)*.16;ship.rotation.z=Math.sin(t*.7)*.02;});
+      this.ride('water',[[-34,-34],[-6,-31],[24,-35],[30,-44],[-6,-47],[-32,-42]],ship,
+        {speed:1.5,turn:.7,altitude:()=>0,lift:.08,bob:.06,roll:.022,clearance:4});
       // A rowing boat pulled up onto the sand, with one oar left behind.
       const rowing=new THREE.Group();rowing.position.set(-9,this.height(-9,-7.4),-7.4);rowing.rotation.y=.5;this.static.add(rowing);
       this.shape('sphere',0xcf9d7a,0,.28,0,.72,.3,1.7,rowing);
@@ -360,6 +373,15 @@ export class DestinationScene {
       this.object(-9,-7.4,1.4,1);
     }
     if(id==='village'){
+      // A produce cart trundles round the market lane all day.
+      const cart=new THREE.Group();this.group.add(cart);
+      this.shape('box',0xb08a5f,0,.72,0,1.5,.5,2.4,cart);
+      for(const side of [-1,1])this.shape('box',0xc39a6b,side*.78,1,0,.1,.62,2.4,cart);
+      this.shape('box',0xc39a6b,0,1,-1.15,1.56,.62,.1,cart);
+      for(let i=0;i<6;i++)this.shape('sphere',[0xd9c07a,0xc8705f,0xa9b47a][i%3],(i%3-1)*.4,1.12,(Math.floor(i/3)-.5)*.8,.32,.24,.32,cart);
+      for(const side of [-1,1])for(const z of [-.9,.9]){const wheel=this.shape('cylinder',0x8d6f4e,side*.86,.42,z,.42,.13,.42,cart);wheel.rotation.z=Math.PI/2;}
+      this.shape('cylinder',0x9b7a55,0,.62,1.55,.06,1.2,.06,cart).rotation.x=Math.PI/2;
+      this.ride('land',[[-19,4.6],[0,4.4],[18,5],[19,8.5],[10,9.2],[0,8.8],[-12,9.4],[-19,8.6]],cart,{speed:2.4,turn:2.2,clearance:1.2,lane:{width:2.5,color:0xcdb68d}});
       const wagon=new THREE.Group();wagon.position.set(-4,this.height(-4,-8),-8);wagon.rotation.y=.4;this.static.add(wagon);
       this.shape('box',0xb08a5f,0,.85,0,1.7,.55,3,wagon);
       for(const side of [-1,1])this.shape('box',0xc39a6b,side*.88,1.15,0,.1,.7,3,wagon);
@@ -377,13 +399,26 @@ export class DestinationScene {
       }
       const cable=new THREE.Line(new THREE.BufferGeometry().setFromPoints([a,b]),new THREE.LineBasicMaterial({color:0x5d6168}));this.group.add(cable);
       const gondola=new THREE.Group();this.group.add(gondola);
-      this.shape('box',0xcf8f6f,0,-1.3,0,1.3,1.3,1.6,gondola);
-      this.shape('box',0xc3dbe0,0,-1.3,.84,1,.8,.05,gondola);
-      this.shape('box',0xe8dcc0,0,-.58,0,1.45,.16,1.75,gondola);
-      this.shape('cylinder',0x6b6e74,0,-.24,0,.05,.72,.05,gondola);
-      this.dynamic.push(t=>gondola.position.lerpVectors(a,b,(Math.sin(t*.09)+1)/2));
+      this.shape('box',0xcf8f6f,0,-1.55,0,1.3,1.3,1.6,gondola);
+      this.shape('box',0xc3dbe0,0,-1.55,.84,1,.8,.05,gondola);
+      this.shape('box',0xe8dcc0,0,-.82,0,1.45,.16,1.75,gondola);
+      this.shape('cylinder',0x6b6e74,0,-.4,0,.05,.8,.05,gondola);
+      this.shape('box',0x5d6168,0,0,0,.5,.14,.22,gondola);
+      // The car hangs from the cable and eases into each station.
+      this.ride('air',[[a.x,a.z],[b.x,b.z]],gondola,{loop:false,steps:2,pingPong:true,speed:3.2,turn:.9,roll:.02,
+        altitude:rider=>a.y+(b.y-a.y)*(rider.route.length?rider.distance/rider.route.length:0)});
     }
     if(id==='snowlands'){
+      // One sleigh gliding the snow track, and one waiting by the cabin.
+      const glider=new THREE.Group();this.group.add(glider);
+      this.shape('box',0xb4705f,0,.75,0,1.5,.6,2.4,glider);
+      this.shape('box',0xc98675,0,1.2,-.9,1.5,.5,.5,glider);
+      for(let i=0;i<4;i++)this.shape('sphere',[0xe8dcc0,0xa9c6d6][i%2],(i%2-.5)*.6,1.18,(Math.floor(i/2)-.5)*.7,.3,.22,.3,glider);
+      for(const side of [-1,1]){
+        this.shape('box',0x8d6b52,side*.8,.3,0,.12,.14,2.8,glider);
+        this.shape('cylinder',0x8d6b52,side*.8,.56,1.32,.1,.52,.1,glider);
+      }
+      this.ride('land',[[-8,12],[4,14],[14,9],[20,3],[16,-3],[6,1],[-3,4],[-10,9]],glider,{speed:2.6,turn:2,clearance:1.2,lane:{width:2.3,color:0xd3dfe6}});
       const sleigh=new THREE.Group();sleigh.position.set(-6,this.height(-6,-9),-9);sleigh.rotation.y=-.35;this.static.add(sleigh);
       this.shape('box',0xb4705f,0,.75,0,1.5,.6,2.4,sleigh);
       this.shape('box',0xc98675,0,1.2,-.9,1.5,.5,.5,sleigh);
@@ -496,6 +531,14 @@ export class DestinationScene {
     this.markers.forEach(({item,crystal,ring},i)=>{const found=memories.includes(`${this.place.id}/${item.id}`);crystal.visible=!found;ring.material.opacity=found?.25:.65;crystal.position.y=1.8+(reduced?0:Math.sin(t*1.8+i)*.15);crystal.rotation.y=t*.5;});
     if(this.snow){this.snow.visible=!reduced;const pos=this.snow.geometry.attributes.position;for(let i=0;i<pos.count;i++){pos.setY(i,((i*.79-t*(.5+rain*.45))%15+15)%15);pos.setX(i,Math.sin(i*8.2)*37+Math.sin(t*.2+i)*.7);}pos.needsUpdate=true;}
     if(this.aurora){this.aurora.visible=night>.05;this.aurora.material.uniforms.night.value=night;this.aurora.material.uniforms.time.value=t;}
+    for(const entry of this.riders){
+      entry.rider.update(step);
+      const {rider,group,lift=0,bob=0,roll=0,phase}=entry;
+      const base=entry.altitude?entry.altitude(rider):this.height(rider.x,rider.z);
+      group.position.set(rider.x,base+lift+(reduced?0:Math.sin(t*1.25+phase)*bob),rider.z);
+      group.rotation.y=rider.heading;
+      if(roll)group.rotation.z=reduced?0:Math.sin(t*.85+phase)*roll;
+    }
     if(this.traffic){
       // Cars obey the signals, keep their distance, and wait for a bear crossing.
       this.signalCycle.update(step);

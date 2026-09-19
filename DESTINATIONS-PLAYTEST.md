@@ -14,11 +14,11 @@ or choose **Visit another destination** in the pause menu or local map.
 | Destination | Things to see | Who lives there | Moving about |
 | --- | --- | --- | --- |
 | Sunnywood Forest | The original birthday hunt, picnic and Moonwatch nest | Rabbits, sheep, deer, foxes | Birds, butterflies |
-| Honeybell Village | Cottages, flower market, apple orchard, turning windmill, outer lanes | Sheep, rabbits, a deer | A loaded hay wagon |
+| Honeybell Village | Cottages, flower market, apple orchard, turning windmill, outer lanes | Sheep, rabbits, a deer | A produce cart round the market lane, a loaded hay wagon |
 | Lumen City | Pastel towers, glowing windows, clock square, pocket garden, signalled crossroads | Nobody yet — the city needs its own residents | Seven cars obeying the signals, the tram on its own line, parked cars |
-| Seashell Bay | Palms, waves, shells, parasols, lighthouse, beach hut | Rabbits, a fox, a deer | A sailing boat, a ship offshore, a beached rowboat |
-| Cloudstep Mountains | Rising trails, snowy peaks, alpine flowers, camp, boulders | Deer, sheep, a fox | A cable car crossing the valley |
-| Starlight Snowlands | Snowbear, frosted pines, lantern cabins, frozen lake, aurora at night | Foxes, rabbits, a deer | A wooden sleigh |
+| Seashell Bay | Palms, surf, shells, parasols, lighthouse, beach hut | Dune rabbits and a coastal fox | A sailing boat and a ship on their own water lanes, a beached rowboat |
+| Cloudstep Mountains | Rising trails, snowy peaks, alpine flowers, camp, boulders | Deer, sheep, a fox | A cable car shuttling between two pylons |
+| Starlight Snowlands | Snowbear, frosted pines, lantern cabins, frozen lake, aurora at night | Foxes, rabbits, a deer | A sleigh gliding the snow track, one waiting by a cabin |
 
 Each of the five destinations is now as playable as the forest, on an island of
 the same size. Every place holds:
@@ -46,22 +46,27 @@ destination menu's **Your travel memories** section.
 4. Wander the outer ring of each place: more houses, towers, palms, pines and
    paths, with gift boxes out there too. Watch the boats in the bay, the cable
    car and the windmill keep moving while you explore.
-5. **City traffic.** Stand on a pavement at one of the two signalled crossroads
+5. **Everything that travels keeps to its own lane.** The village cart and the
+   snow sleigh run on tracks drawn from the same points they follow, the two
+   boats stay in open water beyond the tide line, and the cable car eases into
+   each station rather than bouncing between them. Nothing should ever clip a
+   cottage, a lamp post, a bench or a tree.
+6. **City traffic.** Stand on a pavement at one of the two signalled crossroads
    and watch a full cycle: north-south runs, everything holds, then east-west.
    Cars brake for the stop line, queue behind each other, steer into their turns
    with the front wheels, and will U-turn or turn off at a junction. Step onto a
    crossing and the nearest car should stop for you. Nothing should ever drive
    over a pavement or through a building.
-6. Pause, then change day/night or weather. Snowlands uses snowfall instead of
+7. Pause, then change day/night or weather. Snowlands uses snowfall instead of
    rain. City windows and village lamps light up at night.
-7. Use **X** to make a postcard. The scene pauses, and the destination appears
+8. Use **X** to make a postcard. The scene pauses, and the destination appears
    on the card and in its download filename.
-8. Travel before the birthday: Bubu should still come along and follow you.
+9. Travel before the birthday: Bubu should still come along and follow you.
    After the birthday she behaves the same way. In the forest she remains behind
    her own door until all eight gifts are collected.
-9. Return to the forest and try the Moonwatch ladder. Travel is unavailable
+10. Return to the forest and try the Moonwatch ladder. Travel is unavailable
    during departure, arrival, birthday and ladder scenes.
-10. Restart while away, then refresh. Both should start a fresh forest adventure,
+11. Restart while away, then refresh. Both should start a fresh forest adventure,
    with an empty bag and no destination gifts or memories.
 
 ## Automated checks
@@ -89,7 +94,13 @@ car and drives the whole fleet for forty simulated seconds, asserting no car
 ever reaches a building; it also checks that the signals never show green both
 ways, that a car holds behind the stop line and crosses on green, that a
 follower keeps its distance, that cars wait for a bear in the road, and that
-every junction offers a way on including a U-turn. Physical phone
+every junction offers a way on including a U-turn.
+`tests/destination-layout.test.js` covers all five places: nothing is built
+inside anything else or hangs off the island, you can stand where you arrive,
+and every travelled route is sampled along its length — land routes must stay on
+open ground and clear of every prop, boats must stay in open water — before the
+whole scene is run for a minute to check each travelling prop actually goes
+somewhere and keeps its place. Physical phone
 performance and haptic feel still need device testing.
 
 Only one additional destination scene exists at a time. Its GPU resources are

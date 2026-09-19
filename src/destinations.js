@@ -37,7 +37,7 @@ export const DESTINATIONS = [
     {id:'pail',name:'A bucket of sunshine',short:'Sand pail',color:0xe0b06a,x:16,z:4,note:'“Four castles. One moat. Zero survivors.”'},
     {id:'coral',name:'A piece of pink coral',short:'Pink coral',color:0xdc9ba4,x:25,z:-4,note:'“The sea left it right where we would find it.”'},
   ],friends:[
-    {kind:'rabbit',x:-15,z:15},{kind:'rabbit',x:-12,z:18},{kind:'fox',x:23,z:15},{kind:'deer',x:-25,z:20},
+    {kind:'rabbit',x:-15,z:15},{kind:'rabbit',x:-12,z:18},{kind:'rabbit',x:19,z:20},{kind:'fox',x:23,z:15},
   ]},
   {id:'mountains',name:'Cloudstep Mountains',kind:'Mountains',tag:'A LITTLE CLOSER TO THE SKY',icon:'mountain',color:'#8b8d9b',sky:0xb0cddd,ground:0x91a187,description:'Follow the rising trail past pine trees, a mountain camp and distant snowy peaks.',detail:'Summit lookout · Campfire clearing · Alpine flowers',spawn:{x:0,z:20},landmarks:[
     {id:'summit',name:'Cloudstep lookout',x:8,z:-7,memory:'The whole world looked smaller. Our little adventure felt bigger.'},
