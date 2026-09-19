@@ -1,8 +1,8 @@
 {
   "blender": "5.2.2 LTS",
   "bones": 13,
-  "triangles": 25824,
-  "materials": 10,
+  "triangles": 19712,
+  "materials": 7,
   "expressions": [
     "Happy",
     "Shy",
@@ -16,5 +16,5 @@
     "Run",
     "Wave"
   ],
-  "bytes": 1229208
+  "bytes": 997624
 }

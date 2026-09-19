@@ -4,9 +4,17 @@ import { loadDuduModel, poseDuduFace } from './blender-dudu.js';
 import { BearExpression } from './bear-expression.js';
 
 const $ = id => document.getElementById(id), stage = $('stage');
-const sheep = new URLSearchParams(location.search).get('animal') === 'sheep';
-const characterName = sheep ? 'The sheep' : 'Dudu';
-document.querySelector(`[data-subject="${sheep ? 'sheep' : 'dudu'}"]`).setAttribute('aria-current', 'page');
+const params = new URLSearchParams(location.search);
+const sheep = params.get('animal') === 'sheep';
+const bear = params.get('bear') === 'bubu' ? 'bubu' : 'dudu';
+const characterName = sheep ? 'The sheep' : bear === 'bubu' ? 'Bubu' : 'Dudu';
+document.querySelector(`[data-subject="${sheep ? 'sheep' : bear}"]`)?.setAttribute('aria-current', 'page');
+if (!sheep && bear === 'bubu') {
+  document.title = 'Bubu · Character workshop';
+  document.querySelector('h1').textContent = 'Meet Bubu';
+  stage.setAttribute('aria-label', 'Interactive 3D preview of Bubu');
+  document.querySelector('.note').textContent = 'A big round head, a ribbon at her neck, and her brightest everyday smile.';
+}
 if (sheep) {
   document.title = 'Sheep · Character workshop';
   document.querySelector('h1').textContent = 'Meet the sheep';
@@ -77,7 +85,7 @@ function render(now) {
 }
 async function load() {
   $('loading').hidden = false;$('retry').hidden = true;
-  $('load-label').textContent = sheep ? 'Fluffing the sheep’s wool…' : 'Getting Dudu ready…';
+  $('load-label').textContent = sheep ? 'Fluffing the sheep’s wool…' : `Getting ${characterName} ready…`;
   try {
     const progress = event => {
       if (event.total) { $('load-progress').max = event.total;$('load-progress').value = event.loaded; }
@@ -85,12 +93,12 @@ async function load() {
     if (sheep) {
       const { SheepModel, loadSheepTemplate } = await import('./blender-sheep.js');
       asset = new SheepModel(await loadSheepTemplate(progress));
-    } else asset = await loadDuduModel(progress);
-    asset.scene.scale.setScalar(sheep ? .82 : .68);scene.add(asset.scene);
+    } else asset = await loadDuduModel(progress, bear);
+    asset.scene.scale.setScalar(sheep ? .82 : bear === 'bubu' ? .66 : .68);scene.add(asset.scene);
     mixer = sheep ? asset.mixer : new THREE.AnimationMixer(asset.scene);chooseClip('Idle');
     $('controls').disabled = false;$('reset-camera').disabled = false;$('loading').hidden = true;
     if (import.meta.env.DEV) window.__duduStudio = {
-      snapshot: () => ({ ready: true, animal: sheep ? 'sheep' : 'dudu', mood, clip, paused, time: clock, triangles: asset.triangles,
+      snapshot: () => ({ ready: true, animal: sheep ? 'sheep' : bear, mood, clip, paused, time: clock, triangles: asset.triangles,
         bones: asset.bones.size, clips: asset.animations.map(a => a.name),
         weights: asset.faces.map(mesh => ({ name: mesh.name, keys: mesh.morphTargetDictionary, values: [...mesh.morphTargetInfluences] })),
         leg: asset.bones.get(sheep ? 'Leg_Front_L' : 'Leg_L').quaternion.toArray(),

@@ -18,6 +18,7 @@
     "test:deployment": "node tests/deployment.browser.mjs",
     "model:dudu": "blender --background --python scripts/build-dudu.py",
     "model:sheep": "blender --background --python scripts/build-sheep.py",
+    "model:bubu": "blender --background --python scripts/build-bubu.py",
     "test:character": "node tests/blender-character.browser.mjs",
     "test:sheep": "node tests/sheep.browser.mjs"
   },

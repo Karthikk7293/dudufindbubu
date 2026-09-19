@@ -2,10 +2,12 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { bearBlink } from './bear-expression.js';
 
-export const DUDU_MODEL_URL = `${import.meta.env.BASE_URL || '/'}models/characters/dudu.glb`;
+export const bearModelUrl = name => `${import.meta.env.BASE_URL || '/'}models/characters/${name}.glb`;
+export const DUDU_MODEL_URL = bearModelUrl('dudu');
 
-export async function loadDuduModel(onProgress) {
-  const gltf = await new GLTFLoader().loadAsync(DUDU_MODEL_URL, onProgress);
+// Both bears share one rig, one set of face shapes and one set of clips.
+export async function loadDuduModel(onProgress, name = 'dudu') {
+  const gltf = await new GLTFLoader().loadAsync(bearModelUrl(name), onProgress);
   const bones = new Map(), faces = [];
   let triangles = 0;
   gltf.scene.traverse(node => {
@@ -17,10 +19,11 @@ export async function loadDuduModel(onProgress) {
     triangles += (node.geometry.index?.count || node.geometry.attributes.position.count) / 3;
     if (node.morphTargetDictionary) faces.push(node);
   });
-  const required = ['Body', 'Head', 'Pack', 'Arm_L', 'Arm_R', 'Forearm_L', 'Forearm_R', 'Leg_L', 'Leg_R', 'Ear_L', 'Ear_R'];
-  if (required.some(name => !bones.has(name)) || !faces.length || !gltf.animations.some(clip => clip.name === 'Walk')) {
+  const required = ['Body', 'Head', 'Pack', 'Arm_L', 'Arm_R', 'Forearm_L', 'Forearm_R',
+    'Leg_L', 'Leg_R', 'Foot_L', 'Foot_R', 'Ear_L', 'Ear_R'];
+  if (required.some(bone => !bones.has(bone)) || !faces.length || !gltf.animations.some(clip => clip.name === 'Walk')) {
     disposeDuduModel(gltf.scene);
-    throw new Error('Dudu’s model is missing its rig, face shapes or walking animation.');
+    throw new Error('This bear’s model is missing its rig, face shapes or walking animation.');
   }
   return { ...gltf, bones, faces, triangles };
 }
@@ -28,11 +31,13 @@ export async function loadDuduModel(onProgress) {
 export function poseDuduFace(asset, values, time = 0, reducedMotion = false) {
   const happy = THREE.MathUtils.clamp(values.smile || 0, 0, 1);
   const shy = THREE.MathUtils.clamp(values.paws || 0, 0, 1) * (1 - happy);
+  const droop = THREE.MathUtils.clamp(values.droop || 0, 0, 1);
   const weights = {
     Happy: happy,
-    Shy: shy,
-    Surprised: THREE.MathUtils.clamp((values.open || 0) * 1.25, 0, 1) * (1 - happy) * (1 - shy),
-    Blink: (1 - bearBlink(time, 0, reducedMotion)) * (1 - happy),
+    Shy: shy * (1 - droop),
+    Sleepy: droop,
+    Surprised: THREE.MathUtils.clamp((values.open || 0) * 1.25, 0, 1) * (1 - happy) * (1 - shy) * (1 - droop),
+    Blink: (1 - bearBlink(time, 0, reducedMotion, droop)) * (1 - happy),
   };
   for (const mesh of asset.faces) {
     for (const [name, index] of Object.entries(mesh.morphTargetDictionary)) {
@@ -52,6 +57,7 @@ export function attachDuduModel(bear, asset) {
     controls[`Arm_${side}`] = data.arms[index];
     controls[`Forearm_${side}`] = data.forearms[index];
     controls[`Leg_${side}`] = data.legs[index];
+    controls[`Foot_${side}`] = data.feet[index];
     controls[`Ear_${side}`] = data.ears[index];
   }
   const oldMeshes = [];

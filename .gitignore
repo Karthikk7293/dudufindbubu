@@ -5,3 +5,4 @@ test-results/
 .vercel/
 *.blend1
 *.blend2
+__pycache__/

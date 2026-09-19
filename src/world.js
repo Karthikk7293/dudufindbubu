@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { currentScreen, forestQuality } from './screen-support.js';
 import { createAnimal, updateAnimal } from './wildlife.js';
 import { animateBearPose, turnBear } from './bear-motion.js';
-import { BearExpression, applyBearFace, lookAtBearTarget } from './bear-expression.js';
+import { BearExpression, applyBearFace, lookAtBearTarget, gazeAtBearTarget } from './bear-expression.js';
 import { ForestAtmosphere } from './atmosphere.js';
 import { Companion, companionStart } from './companion.js';
 import { createForestTree, treeDimensions, buildFlowerBeds, buildButterflies, buildUnderstory, updateVegetation, batchFoliageMaterial } from './vegetation.js';
@@ -64,76 +64,109 @@ function plushMaterial(color){
   const material=new THREE.MeshPhysicalMaterial({color,roughness:.96,sheen:.65,sheenColor:new THREE.Color(color).lerp(new THREE.Color(0xfff7e9),.55),sheenRoughness:.9,bumpMap:furTexture,bumpScale:.018});
   furMaterials.set(color,material);return material;
 }
+// Dudu keeps his established proportions. Bubu follows the user's reference
+// frames: a big round head, small cocoa ears, low glossy eyes, wide soft blush,
+// mitten paws, a ribbon at the neck and a little pink hair bow.
+const BEAR_FORMS={
+  dudu:{scale:.68,headY:1.68,head:[1,.87,.8],body:[.52,.55,.44],bodyY:.62,
+    ear:[.245,.25,.185],earInner:[.15,.155,.028],earAt:[.70,.66,-.05],
+    eye:[.082,.094,.034],eyeX:.265,eyeY:-.34,gloss:1.1,
+    cheek:[.175,.16,.033],cheekX:.50,cheekY:-.43,cheekTurn:.40,browY:-.17,
+    muzzle:null,muzzleY:-.42,nose:[.027,.020,.012],noseY:-.43,
+    mouthY:-.51,mouthSpan:.95,open:[.07,.05,.015,.085],armX:.46,armY:.82,legX:.27,legY:.23},
+  bubu:{scale:.66,headY:1.72,head:[1.02,.92,.84],body:[.50,.55,.41],bodyY:.58,
+    ear:[.215,.22,.17],earInner:[.12,.125,.026],earAt:[.70,.70,-.03],
+    eye:[.092,.105,.036],eyeX:.28,eyeY:-.36,gloss:1.1,
+    cheek:[.185,.17,.034],cheekX:.49,cheekY:-.45,cheekTurn:.42,browY:-.18,
+    muzzle:null,muzzleY:-.44,nose:[.026,.019,.011],noseY:-.45,
+    mouthY:-.53,mouthSpan:.92,open:[.072,.05,.015,.085],armX:.45,armY:.80,legX:.26,legY:.22},
+};
 export function createBear(white=false) {
+  const f=BEAR_FORMS[white?'bubu':'dudu'];
   const root=new THREE.Group(),body=new THREE.Group();root.add(body);
   root.name=white?'Bubu':'Dudu';
-  root.scale.setScalar(white?.66:.68);
-  const fur=white?0xfffcf5:0xc18a59,dark=0x493028,blush=white?0xe6acaa:0xeab65f;
+  root.scale.setScalar(f.scale);
+  const fur=white?0xfffcf5:0xc59468,dark=white?0x4a352b:0x493028,blush=white?0xefafac:0xe79a55;
   const plush=(parent,color,x,y,z,sx,sy=sx,sz=sx)=>{
     const part=new THREE.Mesh(plushGeometry,plushMaterial(color));part.position.set(x,y,z);part.scale.set(sx,sy,sz);part.receiveShadow=true;parent.add(part);return part;
   };
-  plush(body,fur,0,.66,0,.57,.59,.46);
-  const head=new THREE.Group();head.name='plush-head';head.position.y=1.62;body.add(head);
-  plush(head,fur,0,0,0,.96,.79,.69);
+  plush(body,fur,0,f.bodyY,0,...f.body);
+  const head=new THREE.Group();head.name='plush-head';head.position.y=f.headY;body.add(head);
+  plush(head,fur,0,0,0,...f.head);
   // Project the low-set face onto the head so its details sit on the plush,
   // including when the bears turn sideways in the forest.
-  const faceZ=(x,y)=>.69*Math.max(.01,1-Math.abs(x/.96)**(2/.88)-Math.abs(y/.79)**(2/.88))**(.88/2);
+  const faceZ=(x,y)=>f.head[2]*Math.max(.01,1-Math.abs(x/f.head[0])**(2/.88)-Math.abs(y/f.head[1])**(2/.88))**(.88/2);
   const eyes=[],happyEyes=[],ears=[],cheeks=[],brows=[];let pack;
   [-1,1].forEach(side=>{
-    const ear=new THREE.Group();ear.position.set(side*.68,.61,-.06);head.add(ear);ears.push(ear);
-    plush(ear,white?dark:fur,0,0,0,.225,.23,.17);
-    plush(ear,white?0x6c4c3d:0x805236,0,0,.172,.137,.146,.025);
-    const eye=ball(head,0x2f211f,side*.23,-.285,faceZ(side*.23,-.285)+.012,.060,.072,.029);eye.name='button-eye';eye.userData.side=side;eyes.push(eye);
-    ball(eye,0xfff9ec,-.22,.27,.87,.20,.17,.14);
-    const happy=new THREE.Group();happy.position.set(side*.23,-.292,faceZ(side*.23,-.27)+.035);head.add(happy);
+    const ear=new THREE.Group();ear.position.set(side*f.earAt[0],f.earAt[1],f.earAt[2]);head.add(ear);ears.push(ear);
+    plush(ear,white?dark:fur,0,0,0,...f.ear);
+    plush(ear,white?0x6c4c3d:0x805236,0,0,f.ear[2]*1.01,...f.earInner);
+    const eye=ball(head,0x241a17,side*f.eyeX,f.eyeY,faceZ(side*f.eyeX,f.eyeY)+.012,...f.eye);eye.name='button-eye';eye.userData.side=side;eyes.push(eye);
+    // Two highlights keep the eyes glossy rather than flat buttons.
+    ball(eye,0xfff9ec,-.22,.27,.87,.20*f.gloss,.17*f.gloss,.14*f.gloss);
+    ball(eye,0xfff9ec,.28,-.30,.86,.10*f.gloss,.09*f.gloss,.08*f.gloss);
+    const happy=new THREE.Group();happy.position.set(side*f.eyeX,f.eyeY-.007,faceZ(side*f.eyeX,f.eyeY+.015)+.035);head.add(happy);
     line(happy,[[-.07,0,0],[0,.032,.006],[.07,0,0]],0x382720,.018);happy.visible=false;happyEyes.push(happy);
-    const brow=new THREE.Group();brow.position.set(side*.23,-.14,faceZ(side*.23,-.09)+.027);head.add(brow);
+    const brow=new THREE.Group();brow.position.set(side*f.eyeX,f.browY,faceZ(side*f.eyeX,f.browY+.05)+.027);head.add(brow);
     line(brow,[[-.055,0,0],[0,.015,.003],[.055,0,0]],0x493028,.011);brow.visible=false;brows.push(brow);
-    const cheek=plush(head,blush,side*.52,-.405,faceZ(side*.52,-.405)+.018,.158,.155,.03);cheek.rotation.y=side*.25;cheek.rotation.x=.18;cheeks.push(cheek);
+    const cheek=plush(head,blush,side*f.cheekX,f.cheekY,faceZ(side*f.cheekX,f.cheekY)+.018,...f.cheek);cheek.rotation.y=side*f.cheekTurn;cheek.rotation.x=.18;cheeks.push(cheek);
   });
-  plush(head,white?0xfff6e8:0xd9a46e,0,-.375,.661,.105,.058,.035);
-  ball(head,dark,0,-.362,.705,.028,.020,.012);
+  if(f.muzzle)plush(head,0xd9a46e,0,f.muzzleY,faceZ(0,f.muzzleY)+.086,...f.muzzle);
+  ball(head,dark,0,f.noseY,faceZ(0,f.noseY)+.044,...f.nose);
   const smilePoints=[[-.076,-.385],[-.061,-.43],[-.025,-.432],[0,-.405],[.025,-.432],[.061,-.43],[.076,-.385]];
-  const mouth=line(head,smilePoints.map(([x,y])=>[x,y-.025,faceZ(x,y-.025)+.115]),0x382720,.017);
-  const openMouth=mesh(new THREE.CircleGeometry(1,24),0x4d292b,head,0,-.468,.729,[.06,.06,1]);openMouth.visible=false;
+  const mouthY=f.mouthY+.41;
+  const mouth=line(head,smilePoints.map(([x,y])=>[x*f.mouthSpan,y*f.mouthSpan+mouthY-.025,faceZ(x*f.mouthSpan,y*f.mouthSpan+mouthY-.025)+.115]),0x382720,.017);
+  const openMouth=mesh(new THREE.CircleGeometry(1,24),0x4d292b,head,0,f.mouthY-.058,faceZ(0,f.mouthY-.058)+.10,[.06,.06,1]);openMouth.visible=false;
   const tongue=mesh(new THREE.CircleGeometry(1,16),0xe4a19b,openMouth,0,-.4,.006,[.58,.24,1]);
-  // Small plush tufts with the blue/red bands visible in the reference.
-  const tuft=new THREE.Group();tuft.position.set(0,.775,-.02);head.add(tuft);
-  cylinder(tuft,white?0x9d5b57:0x4b798b,0,.04,0,.087,.087,.055,16);
-  [-1,0,1].forEach(i=>{const lobe=plush(tuft,fur,i*.052,.13+(i===0?.035:0),0,.054,.105,.055);lobe.rotation.z=-i*.23;});
-  const arms=[],legs=[],forearms=[];
+  const arms=[],legs=[],forearms=[],feet=[];
   [-1,1].forEach(side=>{
-    const arm=new THREE.Group();arm.position.set(side*.52,.86,0);body.add(arm);
-    plush(arm,fur,side*.02,-.085,.015,.175,.18,.19);
-    const elbow=new THREE.Group();elbow.position.set(side*.025,-.17,.025);arm.add(elbow);forearms.push(elbow);
-    plush(elbow,fur,0,-.055,.01,.185,white?.15:.18,.2);
-    if(white)plush(elbow,dark,0,-.155,.035,.15,.075,.16);
+    const arm=new THREE.Group();arm.position.set(side*f.armX,f.armY,0);body.add(arm);
+    plush(arm,fur,side*.02,-.08,.015,.185,.22,.195);
+    const elbow=new THREE.Group();elbow.position.set(side*.02,-.185,.02);arm.add(elbow);forearms.push(elbow);
+    plush(elbow,fur,0,-.02,.005,.142,.122,.152);
+    // Bubu's cocoa mitten tips, and a softer paw tone for Dudu.
+    plush(elbow,white?dark:0xbb8659,0,-.105,.02,.147,.088,.157);
     arms.push(arm);
-    const leg=new THREE.Group();leg.position.set(side*.28,.24,0);body.add(leg);
-    plush(leg,fur,0,white?-.025:-.055,.025,.22,white?.175:.22,.25);
-    if(white)plush(leg,dark,0,-.17,.065,.205,.078,.235);
+    const leg=new THREE.Group();leg.position.set(side*f.legX,f.legY,0);body.add(leg);
+    plush(leg,fur,0,-.035,.025,.22,white?.185:.2,.25);
+    // A separate ankle keeps the sole level under the bear and rolls it off the toes.
+    const foot=new THREE.Group();foot.position.set(0,-.13,0);leg.add(foot);feet.push(foot);
+    plush(foot,white?dark:0xbb8659,0,-.05,.06,white?.205:.202,white?.082:.076,white?.235:.232);
     legs.push(leg);
   });
-  plush(body,fur,0,.47,-.47,.15,.16,.15);
+  plush(body,fur,0,f.bodyY-.18,-f.body[2]-.02,.17,.175,.16);
   if(white){
-    const bow=new THREE.Group();bow.name='bubu-bow-tie';bow.position.set(0,.93,.49);body.add(bow);
-    const ribbon=mesh(new THREE.TorusGeometry(.41,.034,6,36),dark,body,0,.97,0);ribbon.rotation.x=Math.PI/2;ribbon.scale.set(1.14,1,1);
-    [-1,1].forEach(side=>{const loop=plush(bow,dark,side*.115,0,0,.135,.093,.052);loop.rotation.z=side*.28;});
-    plush(bow,0x382821,0,0,.04,.065,.065,.045);
+    // A ribbon collar with a small knot, and the reference's pink hair bow.
+    const ribbon=mesh(new THREE.TorusGeometry(.44,.032,6,36),dark,body,0,.84,0);ribbon.rotation.x=Math.PI/2;ribbon.scale.set(1.05,1,.95);
+    const bow=new THREE.Group();bow.name='bubu-bow-tie';bow.position.set(0,.80,.37);body.add(bow);
+    [-1,1].forEach(side=>{const tail=plush(bow,dark,side*.085,-.055,0,.05,.10,.035);tail.rotation.z=side*.42;});
+    plush(bow,0x2f211c,0,0,.03,.058,.052,.042);
+    const hair=new THREE.Group();hair.name='bubu-hair-bow';hair.position.set(.40,.855,.315);hair.rotation.set(-.2,.16,-.34);head.add(hair);
+    [-1,1].forEach(side=>{const loop=plush(hair,0xf4b8c6,side*.175,-.012,0,.155,.12,.062);loop.rotation.z=side*.55;});
+    plush(hair,0xeca7b7,0,0,.045,.055,.052,.045);
   }else{
+    // Small plush tufts with the blue/red bands visible in the reference.
+    const tuft=new THREE.Group();tuft.position.set(0,.845,-.02);head.add(tuft);
+    cylinder(tuft,0x4b798b,0,.04,0,.087,.087,.055,16);
+    [-1,0,1].forEach(i=>{const lobe=plush(tuft,fur,i*.052,.13+(i===0?.035:0),0,.054,.105,.055);lobe.rotation.z=-i*.23;});
     // Keep Dudu's working gift bag and add the reel's little white-bear charm.
-    pack=plush(body,0x859165,0,.76,-.49,.46,.43,.26);
-    box(body,0xa1a276,0,1.08,-.72,.65,.10,.12);
-    plush(body,0x9da173,0,.64,-.73,.31,.20,.045);
-    box(body,0xc3b085,0,.85,-.786,.10,.17,.028);
-    [-1,1].forEach(side=>line(body,[[side*.35,1.1,-.3],[side*.45,1.04,.22],[side*.38,.62,.39]],0x78845d,.035));
-    const charm=new THREE.Group();charm.name='bubu-keepsake';charm.position.set(-.40,.54,.43);charm.rotation.z=-.18;body.add(charm);
-    line(body,[[-.40,.92,.4],[-.44,.8,.46],[-.40,.74,.43]],0xaa875b,.014);
+    pack=plush(body,0x859165,0,.70,-.46,.42,.40,.25);
+    box(body,0xa1a276,0,1,-.68,.6,.095,.115);
+    plush(body,0x9da173,0,.59,-.69,.29,.19,.042);
+    box(body,0xc3b085,0,.79,-.744,.095,.16,.026);
+    [-1,1].forEach(side=>line(body,[[side*.32,1.02,-.28],[side*.41,.97,.2],[side*.34,.58,.37]],0x78845d,.033));
+    const charm=new THREE.Group();charm.name='bubu-keepsake';charm.position.set(-.36,.50,.40);charm.rotation.z=-.18;body.add(charm);
+    line(body,[[-.36,.86,.37],[-.40,.75,.43],[-.36,.69,.40]],0xaa875b,.014);
     plush(charm,0xfff7e9,0,.04,0,.092,.13,.067);plush(charm,0xfff7e9,0,.205,.016,.13,.115,.072);
     [-1,1].forEach(side=>{plush(charm,0xfff7e9,side*.10,.29,.012,.045);plush(charm,0xfff7e9,side*.108,.085,0,.044,.075,.04);plush(charm,0xfff7e9,side*.052,-.088,.02,.046,.064,.045);ball(charm,dark,side*.043,.21,.087,.012);});
     ball(charm,dark,0,.17,.09,.017,.012,.008);
   }
-  root.userData={body,head,arms,forearms,legs,eyes,happyEyes,ears,cheeks,brows,mouth,openMouth,tongue,pack,expression:new BearExpression(),blinkOffset:white?2.2:0};return root;
+  root.userData={body,head,arms,forearms,legs,feet,eyes,happyEyes,ears,cheeks,brows,mouth,openMouth,tongue,pack,
+    expression:new BearExpression(),blinkOffset:white?2.2:0,waveHand:white?1:0,armX:f.armX,
+    // Bubu wears her brightest reference face whenever the story leaves her at rest.
+    restMood:'bright',
+    face:{eye:f.eye,eyeX:f.eyeX,cheek:f.cheek,browY:f.browY,open:f.open}};
+  return root;
 }
 
 export function animateBearFace(bear,time,happy=false,reducedMotion=false){
@@ -212,15 +245,16 @@ export class ForestWorld {
     this.dudu=createBear();
     // The first Blender character is available for review without changing the
     // established default cast. Only this preview downloads the extra asset.
-    if(new URLSearchParams(window.location.search).get('dudu')==='blender'){
-      await progress(76,'Getting Dudu’s new look ready…');
-      try{
-        const {loadDuduModel,attachDuduModel}=await import('./blender-dudu.js');
-        attachDuduModel(this.dudu,await loadDuduModel());
-      }catch(error){this.characterLoadError='Dudu’s new look could not load. His usual look is ready to play.';console.warn(this.characterLoadError,error);}
-    }
     this.dudu.position.set(state.position.x,0,state.position.z);this.dudu.rotation.y=.6;this.scene.add(this.dudu);
     this.bubu=createBear(true);this.bubu.position.set(BUBU.x,.25,BUBU.z);this.bubu.rotation.y=.35;this.scene.add(this.bubu);
+    if(new URLSearchParams(window.location.search).get('dudu')==='blender'){
+      await progress(76,'Getting the bears’ new look ready…');
+      try{
+        const {loadDuduModel,attachDuduModel}=await import('./blender-dudu.js');
+        const [duduAsset,bubuAsset]=await Promise.all([loadDuduModel(undefined,'dudu'),loadDuduModel(undefined,'bubu')]);
+        attachDuduModel(this.dudu,duduAsset);attachDuduModel(this.bubu,bubuAsset);
+      }catch(error){this.characterLoadError='The bears’ new look could not load. Their usual look is ready to play.';console.warn(this.characterLoadError,error);}
+    }
     this.bubu.visible=state.bubuArrived;this.dudu.visible=state.departed;
     this.companion=null;
     if(state.completed)this.beginTogether();
@@ -497,6 +531,7 @@ export class ForestWorld {
       body.forearms.forEach(arm=>arm.rotation.x=climbing?-.25:0);
       body.arms.forEach((arm,j)=>{arm.rotation.z=0;arm.rotation.x=climbing?-2.1+Math.sin(cycle+j*Math.PI)*.45:actor.moving?Math.sin(this.time*9+j*Math.PI)*.3:0;});
       body.legs.forEach((leg,j)=>{leg.rotation.x=climbing?Math.sin(cycle+j*Math.PI)*.5:actor.moving?Math.sin(this.time*9+j*Math.PI)*.4:0;});
+      body.feet.forEach(foot=>foot.rotation.x=climbing?.24:0);
       bear.userData.groundShadow.visible=!climbing&&!watching;
     });
     this.state.position={x:this.dudu.position.x,z:this.dudu.position.z};
@@ -508,13 +543,13 @@ export class ForestWorld {
     }
     if(journey.phase==='finished'){
       this.story='exploring';this.moonJourney=null;this.follow.initialized=false;
-      [this.dudu,this.bubu].forEach(b=>{b.userData.head.rotation.x=0;b.userData.arms.forEach(arm=>arm.rotation.set(0,0,0));b.userData.legs.forEach(leg=>leg.rotation.set(0,0,0));b.userData.groundShadow.visible=true;});
+      [this.dudu,this.bubu].forEach(b=>{b.userData.head.rotation.x=0;b.userData.arms.forEach(arm=>arm.rotation.set(0,0,0));b.userData.legs.forEach(leg=>leg.rotation.set(0,0,0));b.userData.feet.forEach(foot=>foot.rotation.set(0,0,0));b.userData.groundShadow.visible=true;});
       this.beginTogether();
     }
   }
   beginDeparture(){if(this.state.departed){this.story='exploring';this.dudu.visible=true;return;}this.story='departure';this.storyTime=0;this.dudu.visible=false;this.setCamera(true);}
   revealBubu(){if(!shouldRevealBubu(this.state)||this.cinematic)return;this.story='arrival';this.storyTime=0;this.bubu.visible=false;this.events.push('arrival-start');}
-  resetStory(){this.friendMoment=null;this.reactions.reset();this.animals.forEach(a=>{a.brain.greetCooldown=0;if(a.brain.mode==='friendly'){a.brain.mode='idle';a.brain.timer=1;}});this.moonJourney=null;[this.dudu,this.bubu].forEach(b=>{b.userData.expression.reset();b.userData.lastPosition=null;b.userData.gait=b.userData.strideWeight=b.userData.runWeight=0;b.userData.body.position.set(0,0,0);b.userData.body.rotation.set(0,0,0);});[this.dudu,this.bubu].forEach(b=>{b.userData.head.rotation.x=0;b.userData.groundShadow.visible=true;});this.story='ready';this.storyTime=0;this.companion=null;this.partyGifts?.removeFromParent();this.partyGifts=null;this.bubu.visible=false;this.bubu.position.set(BUBU.x,.25,BUBU.z);this.bubu.userData.arms.forEach(arm=>arm.rotation.set(0,0,0));this.dudu.visible=false;this.duduNest.door.rotation.y=0;this.bubuNest.door.rotation.y=0;this.events=[];this.overview=false;this.zoomView=this.mobile?25:27;this.beginDeparture();}
+  resetStory(){this.friendMoment=null;this.reactions.reset();this.animals.forEach(a=>{a.brain.greetCooldown=0;if(a.brain.mode==='friendly'){a.brain.mode='idle';a.brain.timer=1;}});this.moonJourney=null;[this.dudu,this.bubu].forEach(b=>{b.userData.expression.reset();b.userData.lastPosition=null;b.userData.gait=b.userData.strideWeight=b.userData.runWeight=b.userData.velocity=0;b.userData.feet.forEach(foot=>foot.rotation.set(0,0,0));b.userData.body.position.set(0,0,0);b.userData.body.rotation.set(0,0,0);});[this.dudu,this.bubu].forEach(b=>{b.userData.head.rotation.x=0;b.userData.groundShadow.visible=true;});this.story='ready';this.storyTime=0;this.companion=null;this.partyGifts?.removeFromParent();this.partyGifts=null;this.bubu.visible=false;this.bubu.position.set(BUBU.x,.25,BUBU.z);this.bubu.userData.arms.forEach(arm=>arm.rotation.set(0,0,0));this.dudu.visible=false;this.duduNest.door.rotation.y=0;this.bubuNest.door.rotation.y=0;this.events=[];this.overview=false;this.zoomView=this.mobile?25:27;this.beginDeparture();}
   updateStory(dt){
     if(!this.cinematic)return;
     this.storyTime+=dt;
@@ -526,7 +561,7 @@ export class ForestWorld {
     bear.visible=this.storyTime>.4;bear.position.set(THREE.MathUtils.lerp(nest.entry.x,target.x,ease),.23,THREE.MathUtils.lerp(nest.entry.z,target.z,ease));bear.rotation.y=0;
     animateBearPose(bear,dt,this.time,progress>0&&progress<1,this.reducedMotion,false);
     if(this.storyTime>=3.7){
-      nest.door.rotation.y=0;this.story='exploring';bear.userData.legs.forEach(leg=>leg.rotation.x=0);
+      nest.door.rotation.y=0;this.story='exploring';bear.userData.legs.forEach(leg=>leg.rotation.x=0);bear.userData.feet.forEach(foot=>foot.rotation.x=0);
       if(departure){this.state.departed=true;this.events.push('departed');}
       else{this.state.bubuArrived=true;this.bubu.userData.expression.react('shy',2.8);this.dudu.userData.expression.react('delighted',2);this.events.push('arrived');}
     }
@@ -605,7 +640,7 @@ export class ForestWorld {
   addBackpackGifts(){
     if(this.backpackGifts)this.dudu.userData.body.remove(this.backpackGifts);
     this.backpackGifts=new THREE.Group();this.dudu.userData.body.add(this.backpackGifts);
-    this.state.collected.forEach((id,i)=>{const gift=createGift(GIFTS.find(g=>g.id===id).color);gift.scale.setScalar(.2);gift.position.set((i%3-1)*.22,1.1+Math.floor(i/3)*.13,-.8);gift.rotation.z=(i-2)*.1;this.backpackGifts.add(gift);});
+    this.state.collected.forEach((id,i)=>{const gift=createGift(GIFTS.find(g=>g.id===id).color);gift.scale.setScalar(.2);gift.position.set((i%3-1)*.21,1.02+Math.floor(i/3)*.12,-.75);gift.rotation.z=(i-2)*.1;this.backpackGifts.add(gift);});
   }
   celebrate(){
     if(this.cinematic||!canCelebrate(this.state))return false;
@@ -665,34 +700,44 @@ export class ForestWorld {
   }
   greetAnimal(animal){
     if(this.cinematic||!animal.brain.greet(this.state.position,this.nightBlend))return false;
-    this.friendMoment={animal,remaining:4};this.dudu.userData.expression.react('content',3);
+    this.friendMoment={animal,remaining:4};this.dudu.userData.expression.react('greet',2.6);
     this.dudu.rotation.y=Math.atan2(animal.group.position.x-this.dudu.position.x,animal.group.position.z-this.dudu.position.z);
     this.reactions.emit(animal.group.position,this.reducedMotion);return true;
   }
   updateBearExpressions(dt,moving){
     const scripted=this.cinematic,time=this.storyTime+dt;
+    // Aim at a friend's face rather than their feet, so the muzzles dip and lift.
+    const face=bear=>({x:bear.position.x,z:bear.position.z,y:bear.position.y+1.25});
     let duduMood='calm',bubuMood='calm',duduTarget=null,bubuTarget=null;
     if(this.story==='party'){
       duduMood=time<3.4?'content':'delighted';bubuMood=time<1.8?'surprised':time<3.4?'wish':'delighted';
-      duduTarget=this.bubu.position;bubuTarget=this.dudu.position;
+      duduTarget=face(this.bubu);bubuTarget=face(this.dudu);
     }else if(this.story==='arrival'){
-      duduMood='content';bubuMood=time<2?'surprised':'shy';duduTarget=this.bubu.position;bubuTarget=this.dudu.position;
+      duduMood='content';bubuMood=time<2?'surprised':'shy';duduTarget=face(this.bubu);bubuTarget=face(this.dudu);
     }else if(this.story==='moon'){
       duduMood=bubuMood=this.moonJourney?.phase==='stargazing'?'wonder':'curious';
     }else if(this.state.completed&&this.bubu.visible){
       duduMood=moving?'calm':'content';bubuMood='content';
-      if(Math.hypot(this.dudu.position.x-this.bubu.position.x,this.dudu.position.z-this.bubu.position.z)<3.5){duduTarget=this.bubu.position;bubuTarget=this.dudu.position;}
+      if(Math.hypot(this.dudu.position.x-this.bubu.position.x,this.dudu.position.z-this.bubu.position.z)<3.5){duduTarget=face(this.bubu);bubuTarget=face(this.dudu);}
     }else{
       let distance=4;
-      for(const gift of GIFTS){const d=Math.hypot(this.state.position.x-gift.x,this.state.position.z-gift.z);if(!this.state.collected.includes(gift.id)&&d<distance){distance=d;duduTarget=gift;duduMood='curious';}}
+      for(const gift of GIFTS){const d=Math.hypot(this.state.position.x-gift.x,this.state.position.z-gift.z);if(!this.state.collected.includes(gift.id)&&d<distance){distance=d;duduTarget={x:gift.x,z:gift.z,y:.95};duduMood='curious';}}
     }
     if(this.friendMoment){
       this.friendMoment.remaining-=dt;
       if(moving||scripted||this.friendMoment.remaining<=0)this.friendMoment=null;
-      else{duduTarget=this.friendMoment.animal.group.position;duduMood='content';}
+      else{const friend=this.friendMoment.animal.group.position;duduTarget={x:friend.x,z:friend.z,y:friend.y+.45};duduMood='content';}
     }
-    this.dudu.userData.expression.update(dt,{mood:duduMood,look:lookAtBearTarget(this.dudu,duduTarget),scripted},this.reducedMotion);
-    this.bubu.userData.expression.update(dt,{mood:bubuMood,look:lookAtBearTarget(this.bubu,bubuTarget),scripted},this.reducedMotion);
+    // A long, quiet stop late at night leaves both bears dozing where they stand.
+    this.restTime=moving||scripted?0:(this.restTime||0)+dt;
+    if(!scripted&&this.nightBlend>.55&&this.restTime>7){
+      if(!duduTarget)duduMood='sleepy';
+      if(!bubuTarget)bubuMood='sleepy';
+    }
+    // A bear at rest wears its own everyday face rather than a blank one.
+    const rest=(bear,mood)=>mood==='calm'?bear.userData.restMood||'calm':mood;
+    this.dudu.userData.expression.update(dt,{mood:rest(this.dudu,duduMood),look:lookAtBearTarget(this.dudu,duduTarget),gaze:gazeAtBearTarget(this.dudu,duduTarget),scripted},this.reducedMotion);
+    this.bubu.userData.expression.update(dt,{mood:rest(this.bubu,bubuMood),look:lookAtBearTarget(this.bubu,bubuTarget),gaze:gazeAtBearTarget(this.bubu,bubuTarget),scripted},this.reducedMotion);
   }
   projectLocation(x,y,z){
     const point=new THREE.Vector3(x,y,z),local=point.clone().applyMatrix4(this.camera.matrixWorldInverse),front=local.z<0;
