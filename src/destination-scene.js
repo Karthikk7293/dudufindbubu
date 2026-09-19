@@ -3,6 +3,7 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { destinationHeight, destinationLayout } from './destinations.js';
 import { createAnimal, disposeAnimal, updateAnimal } from './wildlife.js';
 import { isWalkable } from './game-state.js';
+import { RoadNetwork, TrafficLights, Vehicle } from './city-traffic.js';
 
 // Scenery is built only for the destination being visited. Static details share
 // material batches; moving props and memory markers remain separate.
@@ -10,7 +11,7 @@ export class DestinationScene {
   constructor(place,mobile=false){
     this.place=place;this.mobile=mobile;this.group=new THREE.Group();this.static=new THREE.Group();this.group.add(this.static);
     this.obstacles=[];this.cameraObstacles=[];this.markers=[];this.lamps=[];this.dynamic=[];this.materials=new Map();this.geometry=new Map();this.paths=[];
-    this.gifts=[];this.animals=[];
+    this.gifts=[];this.animals=[];this.signals=[];this.signalSkins=new Map();this.traffic=null;
     this.layout=destinationLayout(place.id);this.time=0;
     this.ground=this.makeGround();
     if(place.id!=='city')this.path([[0,33],[0,23],[0,12],[0,3],[0,-8],[0,-19],[0,-30]],2.6);
@@ -131,27 +132,70 @@ export class DestinationScene {
     for(const [x,z]of [[12,-16],[17,-12],[19,-19],[9,-20]]){this.tree(x,z,1.15);for(let i=0;i<5;i++)this.shape('sphere',0xbc7660,x+Math.sin(i*2)*1.1,3.55,z+Math.cos(i*2)*1.1,.16);}
     this.flowers(-13,-10);this.flowers(10,6);this.bench(-3,9,.2);[-20,-9,9,20].forEach(x=>this.lamp(x,5.8));
   }
-  city(){
-    this.path([[-25,8],[0,8],[24,8]],5.4,0x969da0);this.path([[0,24],[0,-24]],5.8,0x969da0);this.path([[-13,-11],[-8,-8],[0,-8]],2.6);
-    for(let z=-21;z<=21;z+=4)this.shape('box',0xe9dbb5,0,.245,z,.14,.016,1.6);
-    for(let x=-2;x<=2;x+=.7)this.shape('box',0xe6e6d8,x,.255,8,.35,.015,4);
-    [[-10,16,6,0xd5afa1],[10,16,8,0x91b0b3],[-20,0,10,0xc7ba9d],[10,-15,11,0xa3acbb],[-20,-19,12,0x94a9ab],[20,-17,8,0xc7a69b],[0,-23,14,0xb5bdba]].forEach(([x,z,h,c])=>{
-      this.shape('box',c,x,.2+h/2,z,5.4,h,4.7);this.shape('box',0xede3cf,x,h+.28,z,5.65,.2,5);
-      for(let row=1;row<h-1;row+=2)for(const side of [-1,1])this.shape('box',0xffdca6,x+side*1.3,row+.5,z+2.37,1,1.05,.06,this.static,true);
-      this.shape('box',0x77979b,x,1.1,z+2.4,1.2,1.8,.06);this.object(x,z,3.6,h+.5);
+  crossing(x,z,along){
+    // Zebra stripes run the way people walk, repeating along the road.
+    for(let i=-3;i<=3;i++){
+      if(along==='x')this.shape('box',0xeeeade,x+i*.82,.252,z,.44,.014,5.4);
+      else this.shape('box',0xeeeade,x,.252,z+i*.82,5.4,.014,.44);
+    }
+  }
+  signalPost(x,z,axis,facing){
+    const head=new THREE.Group();head.position.set(x,this.height(x,z),z);head.rotation.y=facing;this.group.add(head);
+    this.shape('cylinder',0x4f555a,0,1.7,0,.07,3.4,.07,head);
+    this.shape('box',0x3f4449,0,3.05,.12,.34,.92,.3,head);
+    const lamps=['red','amber','green'].map((tone,i)=>{
+      const lamp=this.shape('sphere',0x2f3337,0,3.35-i*.27,.28,.1,.1,.06,head);
+      lamp.userData.tone=tone;return lamp;
     });
-    this.shape('cylinder',0xc9c4b2,0,.55,-2,2.1,.7,2.1);this.shape('cylinder',0x85b9c2,0,.93,-2,1.85,.04,1.85);this.shape('sphere',0xbee4db,0,1.55,-2,.55,.8,.55);this.object(0,-2,2.1,2.4);
-    this.shape('box',0xc3ad89,0,3.8,-8,2.9,7.2,2.9);this.shape('cone',0x678184,0,8,-8,2.2,2,2.2);this.object(0,-8,2,9.4);
-    const clock=this.shape('cylinder',0xf4e9ce,0,6.3,-6.51,.82,.09,.82);clock.rotation.x=Math.PI/2;
-    this.shape('box',0x647572,0,6.58,-6.43,.08,.55,.08);const hand=this.shape('box',0x647572,.2,6.3,-6.42,.5,.08,.08);hand.rotation.z=.35;
-    for(const x of [22.3,23.5])this.shape('box',0x737e7f,x,.24,0,.065,.07,43);
-    const tram=new THREE.Group();this.group.add(tram);this.shape('box',0x709c94,0,1.4,0,2,2,4,tram);this.shape('box',0xe9d7ad,0,2.5,0,2.15,.25,4.2,tram);
-    for(const z of [-1.25,0,1.25])this.shape('box',0xc5dfe2,-1.02,1.8,z,.04,.72,.8,tram);
-    for(const x of [-.85,.85])for(const z of [-1.25,1.25]){const wheel=this.shape('cylinder',0x53646a,x,.4,z,.35,.12,.35,tram);wheel.rotation.z=Math.PI/2;}
-    this.dynamic.push(t=>{tram.position.set(22.9,0,Math.sin(t*.08)*17);});
-    this.shape('box',0x77969d,15,2.1,6,3,.2,1.4);this.shape('cylinder',0x637e7d,13.6,1.2,6,.055,2.2,.055);this.object(15,6,.7,2.4);
-    for(const [x,z]of [[-16,-14],[-9,-16],[-16,-6]])this.tree(x,z,.85);this.flowers(-10,-10);this.bench(-15,-9);this.bench(7,3);
-    for(const x of [-4,4])for(const z of [-17,1,18])this.lamp(x,z);
+    this.object(x,z,.16,3.6);this.signals.push({axis,lamps});
+  }
+  city(){
+    const xs=[-24,0,24],zs=[24,8,-11,-26];
+    this.roads=new RoadNetwork(xs,zs);this.signals=[];
+    for(const z of zs)this.path([[-24,z],[0,z],[24,z]],6.2,0x9aa0a2);
+    for(const x of xs)this.path([[x,24],[x,0],[x,-26]],6.2,0x9aa0a2);
+    // Pavement slabs fill each block between the roads.
+    for(const [bx,bz,depth] of [[-12,16,9.8],[12,16,9.8],[-12,-1.5,12.8],[12,-1.5,12.8],[-12,-18.5,8.8],[12,-18.5,8.8]])
+      this.shape('box',0xcdc9ba,bx,.235,bz,17.8,.03,depth);
+    // Dashed centre lines, kept clear of every junction.
+    const clear=(value,list)=>list.every(at=>Math.abs(value-at)>5.6);
+    for(const z of zs)for(let x=-23;x<=23;x+=3.6)if(clear(x,xs))this.shape('box',0xe9dbb5,x,.245,z,1.6,.016,.14);
+    for(const x of xs)for(let z=-25;z<=23;z+=3.6)if(clear(z,zs))this.shape('box',0xe9dbb5,x,.245,z,.14,.016,1.6);
+    // Signalled crossroads: crossings on all four approaches, lights on the corners.
+    for(const z of [8,-11]){
+      for(const x of [-5.7,5.7])this.crossing(x,z,'x');
+      for(const dz of [5.7,-5.7])this.crossing(0,z+dz,'z');
+      this.signalPost(-4.4,z+4.4,'ew',Math.PI/2);this.signalPost(4.4,z-4.4,'ew',-Math.PI/2);
+      this.signalPost(4.4,z+4.4,'ns',Math.PI);this.signalPost(-4.4,z-4.4,'ns',0);
+    }
+    // Townhouses sit well inside each block, clear of every driving lane.
+    for(const [x,z,h,c] of [[-15,16,11,0xb7b0a0],[-8,16,8,0xd5afa1],[8,16,10,0x91b0b3],[15,16,7,0xc7a69b],
+      [8,-1.5,12,0xa3acbb],[15,-1.5,9,0xc7ba9d],[-15,-18.5,10,0x94a9ab],[-8,-18.5,13,0xb5bdba]]){
+      this.shape('box',c,x,.26+h/2,z,5.4,h,4.7);this.shape('box',0xede3cf,x,h+.34,z,5.65,.2,5);
+      for(let row=1;row<h-1;row+=2)for(const side of [-1,1])this.shape('box',0xffdca6,x+side*1.3,row+.56,z+2.37,1,1.05,.06,this.static,true);
+      this.shape('box',0x77979b,x,1.16,z+2.4,1.2,1.8,.06);this.object(x,z,3.6,h+.5);
+    }
+    // Clocktower square fills the block west of the main junction.
+    this.shape('cylinder',0xc9c4b2,-8,.55,-1.5,2.1,.7,2.1);this.shape('cylinder',0x85b9c2,-8,.93,-1.5,1.85,.04,1.85);
+    this.shape('sphere',0xbee4db,-8,1.55,-1.5,.55,.8,.55);this.object(-8,-1.5,2.1,2.4);
+    this.shape('box',0xc3ad89,-15,3.86,-1.5,2.9,7.2,2.9);this.shape('cone',0x678184,-15,8.06,-1.5,2.2,2,2.2);this.object(-15,-1.5,2,9.4);
+    const clock=this.shape('cylinder',0xf4e9ce,-15,6.36,-.01,.82,.09,.82);clock.rotation.x=Math.PI/2;
+    this.shape('box',0x647572,-15,6.64,.07,.08,.55,.08);const hand=this.shape('box',0x647572,-14.8,6.36,.08,.5,.08,.08);hand.rotation.z=.35;
+    this.bench(-12,2,Math.PI);this.bench(-12,-5,0);this.tree(-19,-5.5,.8);this.tree(-19,2.5,.75);
+    // The pocket garden keeps the south-east block green.
+    for(const [x,z,s] of [[8,-16,.9],[16,-21,.95],[9,-21.5,.8],[16.5,-15.5,.85]])this.tree(x,z,s);
+    this.flowers(12,-18.5);this.bench(12,-15.2,Math.PI);this.bench(12,-21.8,0);
+    // The tram keeps its own line east of the ring road.
+    for(const x of [31.4,32.6])this.shape('box',0x737e7f,x,.24,0,.065,.07,42);
+    const tram=new THREE.Group();this.group.add(tram);this.shape('box',0x709c94,0,1.4,0,2,2,4.4,tram);
+    this.shape('box',0xe9d7ad,0,2.5,0,2.15,.25,4.6,tram);
+    for(const z of [-1.4,0,1.4])this.shape('box',0xc5dfe2,-1.02,1.8,z,.04,.72,.9,tram);
+    for(const x of [-.85,.85])for(const z of [-1.4,1.4]){const wheel=this.shape('cylinder',0x53646a,x,.4,z,.35,.12,.35,tram);wheel.rotation.z=Math.PI/2;}
+    this.dynamic.push(t=>{tram.position.set(32,0,Math.sin(t*.09)*18);});
+    this.shape('box',0x77969d,28.5,2.1,8,3.4,.2,1.6);this.shape('cylinder',0x637e7d,27.1,1.2,8,.055,2.2,.055);this.object(28.5,8,.8,2.4);
+    // Street lighting along the pavements, never in a driving lane.
+    for(const z of [18,2,-6,-21])for(const x of [-4.4,4.4])this.lamp(x,z);
+    for(const x of [-14,14])for(const z of [11.6,4.4,-7.6,-14.6])this.lamp(x,z);
   }
   palm(x,z,size=1){
     const y=this.height(x,z);this.shape('cylinder',0xb4936b,x,y+2*size,z,.15*size,4*size,.17*size);
@@ -242,18 +286,28 @@ export class DestinationScene {
   }
   car(color,x=0,z=0,parked=false){
     const g=new THREE.Group();g.position.set(x,this.height(x,z),z);(parked?this.static:this.group).add(g);
-    this.shape('box',color,0,.5,0,1.5,.5,3.2,g);
-    this.shape('box',color,0,.9,-.2,1.34,.42,1.5,g);
-    for(const z2 of [.56,-.98])this.shape('box',0xc3dbe0,0,.93,z2,1.16,.32,.07,g);
+    const wheels=[];
+    // A softly rounded shell over the chassis, with glass, lamps and mirrors.
+    this.shape('box',color,0,.5,0,1.48,.44,2.94,g);
+    this.shape('sphere',color,0,.52,.15,.8,.4,1.66,g);
+    this.shape('sphere',color,0,.86,-.24,.64,.35,1.02,g);
+    this.shape('box',0x9fc4cf,0,.9,.62,1.16,.32,.06,g);
+    this.shape('box',0x9fc4cf,0,.9,-1.08,1.12,.3,.06,g);
+    this.shape('box',0xe3ded0,0,.33,-1.53,.52,.14,.05,g);
     for(const side of [-1,1]){
-      this.shape('box',0xf6e7c0,side*.45,.52,1.62,.42,.16,.06,g,true);
-      this.shape('box',0xc9776a,side*.45,.52,-1.62,.42,.16,.06,g,true);
+      this.shape('box',0x9fc4cf,side*.74,.9,-.24,.05,.28,.88,g);
+      this.shape('sphere',0x4a4f54,side*.82,.64,.36,.06,.06,.15,g);
+      this.shape('box',0xf6e7c0,side*.46,.5,1.5,.34,.16,.1,g,true);
+      this.shape('box',0xc9776a,side*.46,.5,-1.49,.34,.14,.1,g,true);
     }
     for(const sx of [-1,1])for(const sz of [-1,1]){
-      const wheel=this.shape('cylinder',0x3d4247,sx*.74,.3,sz*1.05,.3,.18,.3,g);wheel.rotation.z=Math.PI/2;
+      const hub=new THREE.Group();hub.position.set(sx*.74,.3,sz*1.02);hub.rotation.order='YXZ';g.add(hub);
+      const tyre=this.shape('cylinder',0x35393d,0,0,0,.3,.2,.3,hub);tyre.rotation.z=Math.PI/2;
+      const rim=this.shape('cylinder',0xd3cfc2,sx*.055,0,0,.17,.12,.17,hub);rim.rotation.z=Math.PI/2;
+      wheels.push({hub,front:sz>0});
     }
-    if(parked)this.object(x,z,1.6,1.4);
-    return g;
+    if(parked)this.object(x,z,1.7,1.4);
+    return {group:g,wheels};
   }
   boat(x,z,size=1,hull=0xd6ae86,sail=0xf5ecd8){
     const g=new THREE.Group();g.position.set(x,.08,z);this.group.add(g);
@@ -269,20 +323,28 @@ export class DestinationScene {
   vehicles(){
     const id=this.place.id;
     if(id==='city'){
-      for(const lane of [
-        {along:'x',at:6.6,from:-30,to:29,speed:3.6,color:0xd7a49c},
-        {along:'x',at:9.4,from:29,to:-30,speed:2.9,color:0x8fb1b9},
-        {along:'z',at:-1.7,from:29,to:-30,speed:3.2,color:0xcfc4a4},
-        {along:'z',at:1.7,from:-30,to:29,speed:2.4,color:0xa5b6c4},
-      ]){
-        const g=this.car(lane.color),span=Math.abs(lane.to-lane.from),dir=Math.sign(lane.to-lane.from);
-        this.dynamic.push(t=>{
-          const at=lane.from+dir*((t*lane.speed)%span);
-          if(lane.along==='x'){g.position.set(at,this.height(at,lane.at),lane.at);g.rotation.y=dir>0?Math.PI/2:-Math.PI/2;}
-          else{g.position.set(lane.at,this.height(lane.at,at),at);g.rotation.y=dir>0?0:Math.PI;}
-        });
-      }
-      for(const [x,z,color,turn] of [[-7.8,14,0xbfa9c0,0],[7.8,-13,0xc9b08a,Math.PI],[-7.8,-5,0x9fb8ae,0]])this.car(color,x,z,true).rotation.y=turn;
+      // Traffic is driven from the same grid the roads are drawn from, so a lane
+      // can never run through a building.
+      this.signalCycle=new TrafficLights();this.traffic=[];this.vehicles=[];
+      const fleet=[
+        {edge:[0,0,1,0],color:0xd7a49c,speed:7,start:6},
+        {edge:[2,1,1,1],color:0x8fb1b9,speed:6.2,start:4},
+        {edge:[1,0,1,1],color:0xcfc4a4,speed:6.8,start:3},
+        {edge:[1,2,1,1],color:0xa5b6c4,speed:5.8,start:9},
+        {edge:[0,3,1,3],color:0xbfa9c0,speed:6.4,start:12},
+        {edge:[2,2,2,3],color:0xc9b08a,speed:6,start:5},
+        {edge:[0,2,0,1],color:0x9fb8ae,speed:6.6,start:8},
+      ];
+      fleet.forEach((spec,index)=>{
+        const edge=this.roads.edgeAt(...spec.edge);
+        if(!edge)return;
+        const {group,wheels}=this.car(spec.color);
+        const vehicle=new Vehicle(this.roads,edge,{speed:spec.speed,seed:index*37+11,start:spec.start});
+        this.vehicles.push(vehicle);this.traffic.push({vehicle,group,wheels});
+      });
+      // Two cars parked on the pavement, clear of every lane and doorway.
+      for(const [x,z,color,turn] of [[5.2,-19,0xbfa9c0,Math.PI],[-5.2,-6,0x9fb8ae,0]])
+        this.car(color,x,z,true).group.rotation.y=turn;
     }
     if(id==='beach'){
       const sailing=this.boat(0,-19,1);
@@ -342,14 +404,14 @@ export class DestinationScene {
       this.flowers(-24,-14);this.flowers(24,-18);this.bench(22,22,-.6);
     }
     if(id==='city'){
-      [[-28,10,13,0xb7b0a0],[27,14,9,0xc3a99e],[-27,26,11,0xa5b3c0],[24,26,10,0xcbbda0],[-9,30,12,0xb0bfbd],[11,31,9,0xd0b2a4]].forEach(([x,z,h,c])=>{
-        this.shape('box',c,x,.2+h/2,z,5.4,h,4.7);this.shape('box',0xede3cf,x,h+.28,z,5.65,.2,5);
-        for(let row=1;row<h-1;row+=2)for(const side of [-1,1])this.shape('box',0xffdca6,x+side*1.3,row+.5,z+2.37,1,1.05,.06,this.static,true);
+      // Outer blocks sit beyond the ring road, never over a driving lane.
+      [[-32,8,13,0xb7b0a0],[32,-4,9,0xc3a99e],[-32,-17,11,0xa5b3c0],[32,16,10,0xcbbda0],[-14,33,12,0xb0bfbd],[13,34,9,0xd0b2a4]].forEach(([x,z,h,c])=>{
+        this.shape('box',c,x,.26+h/2,z,5.4,h,4.7);this.shape('box',0xede3cf,x,h+.34,z,5.65,.2,5);
+        for(let row=1;row<h-1;row+=2)for(const side of [-1,1])this.shape('box',0xffdca6,x+side*1.3,row+.56,z+2.37,1,1.05,.06,this.static,true);
         this.object(x,z,3.6,h+.5);
       });
-      this.path([[-27,-8],[-14,-8],[-5,-8]],2.6);
-      for(const z of [24,30])for(const x of [-4,4])this.lamp(x,z);
-      this.bench(-20,20);this.flowers(20,-8);
+      this.bench(-30,0,.5);this.bench(30,8,-.5);this.flowers(-30,-9);this.flowers(29,25);
+      for(const [x,z] of [[-30,20],[30,-14],[-21,31],[21,31]])this.lamp(x,z);
     }
     if(id==='beach'){
       [[-27,18,1.1],[26,20,1.25],[-25,-2,1],[29,8,1.05],[15,24,1.15]].forEach(p=>this.palm(...p));
@@ -434,6 +496,23 @@ export class DestinationScene {
     this.markers.forEach(({item,crystal,ring},i)=>{const found=memories.includes(`${this.place.id}/${item.id}`);crystal.visible=!found;ring.material.opacity=found?.25:.65;crystal.position.y=1.8+(reduced?0:Math.sin(t*1.8+i)*.15);crystal.rotation.y=t*.5;});
     if(this.snow){this.snow.visible=!reduced;const pos=this.snow.geometry.attributes.position;for(let i=0;i<pos.count;i++){pos.setY(i,((i*.79-t*(.5+rain*.45))%15+15)%15);pos.setX(i,Math.sin(i*8.2)*37+Math.sin(t*.2+i)*.7);}pos.needsUpdate=true;}
     if(this.aurora){this.aurora.visible=night>.05;this.aurora.material.uniforms.night.value=night;this.aurora.material.uniforms.time.value=t;}
+    if(this.traffic){
+      // Cars obey the signals, keep their distance, and wait for a bear crossing.
+      this.signalCycle.update(step);
+      for(const car of this.traffic)car.vehicle.update(step,this.signalCycle,this.vehicles,position);
+      for(const {vehicle,group,wheels} of this.traffic){
+        group.position.set(vehicle.x,this.height(vehicle.x,vehicle.z),vehicle.z);group.rotation.y=vehicle.heading;
+        if(reduced)continue;
+        for(const wheel of wheels){
+          wheel.hub.rotation.x-=vehicle.speed*step/.3;
+          if(wheel.front)wheel.hub.rotation.y=vehicle.steer;
+        }
+      }
+      for(const signal of this.signals){
+        const state=this.signalCycle.isGreen(signal.axis)?'green':this.signalCycle.isAmber(signal.axis)?'amber':'red';
+        for(const lamp of signal.lamps)lamp.material=this.signalTone(lamp.userData.tone,lamp.userData.tone===state);
+      }
+    }
     this.gifts.forEach((gift,i)=>{
       const taken=gifts.includes(`${this.place.id}/${gift.item.id}`);
       gift.group.visible=!taken;
@@ -454,10 +533,20 @@ export class DestinationScene {
     return this.animals.filter(animal=>animal.brain.canGreet(position,night))
       .sort((a,b)=>Math.hypot(a.group.position.x-position.x,a.group.position.z-position.z)-Math.hypot(b.group.position.x-position.x,b.group.position.z-position.z))[0];
   }
+  signalTone(tone,on){
+    const key=`${tone}/${on}`;
+    if(!this.signalSkins.has(key)){
+      const base={red:0xd8584a,amber:0xe2a84f,green:0x6fb583}[tone];
+      this.signalSkins.set(key,on
+        ?new THREE.MeshStandardMaterial({color:base,emissive:base,emissiveIntensity:1.4,roughness:.35})
+        :new THREE.MeshStandardMaterial({color:new THREE.Color(base).multiplyScalar(.22),roughness:.7}));
+    }
+    return this.signalSkins.get(key);
+  }
   dispose(){
     // Animals share a palette with the forest, so they release only their own parts.
     for(const animal of this.animals)disposeAnimal(animal);
-    this.animals=[];
+    this.animals=[];this.signalSkins.forEach(material=>material.dispose());this.signalSkins.clear();
     const geometries=new Set(this.geometry.values()),materials=new Set(this.materials.values());
     this.group.traverse(node=>{if(node.geometry)geometries.add(node.geometry);if(node.material)for(const m of Array.isArray(node.material)?node.material:[node.material])materials.add(m);});
     geometries.forEach(g=>g.dispose());materials.forEach(m=>m.dispose());this.group.removeFromParent();

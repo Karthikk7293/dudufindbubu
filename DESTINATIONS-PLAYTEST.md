@@ -15,7 +15,7 @@ or choose **Visit another destination** in the pause menu or local map.
 | --- | --- | --- | --- |
 | Sunnywood Forest | The original birthday hunt, picnic and Moonwatch nest | Rabbits, sheep, deer, foxes | Birds, butterflies |
 | Honeybell Village | Cottages, flower market, apple orchard, turning windmill, outer lanes | Sheep, rabbits, a deer | A loaded hay wagon |
-| Lumen City | Pastel towers, glowing windows, clock tower, pocket garden, wider blocks | Garden rabbits, city foxes | Four cars on the avenues, the tram, parked cars |
+| Lumen City | Pastel towers, glowing windows, clock square, pocket garden, signalled crossroads | Nobody yet — the city needs its own residents | Seven cars obeying the signals, the tram on its own line, parked cars |
 | Seashell Bay | Palms, waves, shells, parasols, lighthouse, beach hut | Rabbits, a fox, a deer | A sailing boat, a ship offshore, a beached rowboat |
 | Cloudstep Mountains | Rising trails, snowy peaks, alpine flowers, camp, boulders | Deer, sheep, a fox | A cable car crossing the valley |
 | Starlight Snowlands | Snowbear, frosted pines, lantern cabins, frozen lake, aurora at night | Foxes, rabbits, a deer | A wooden sleigh |
@@ -44,18 +44,24 @@ destination menu's **Your travel memories** section.
 3. Find a memory twice: the second visit should not create a duplicate. The same
    applies to gift boxes — a collected box disappears and cannot be taken again.
 4. Wander the outer ring of each place: more houses, towers, palms, pines and
-   paths, with gift boxes out there too. Watch the city traffic, the boats in the
-   bay, the cable car and the windmill keep moving while you explore.
-5. Pause, then change day/night or weather. Snowlands uses snowfall instead of
+   paths, with gift boxes out there too. Watch the boats in the bay, the cable
+   car and the windmill keep moving while you explore.
+5. **City traffic.** Stand on a pavement at one of the two signalled crossroads
+   and watch a full cycle: north-south runs, everything holds, then east-west.
+   Cars brake for the stop line, queue behind each other, steer into their turns
+   with the front wheels, and will U-turn or turn off at a junction. Step onto a
+   crossing and the nearest car should stop for you. Nothing should ever drive
+   over a pavement or through a building.
+6. Pause, then change day/night or weather. Snowlands uses snowfall instead of
    rain. City windows and village lamps light up at night.
-6. Use **X** to make a postcard. The scene pauses, and the destination appears
+7. Use **X** to make a postcard. The scene pauses, and the destination appears
    on the card and in its download filename.
-7. Travel before the birthday: Bubu should still come along and follow you.
+8. Travel before the birthday: Bubu should still come along and follow you.
    After the birthday she behaves the same way. In the forest she remains behind
    her own door until all eight gifts are collected.
-8. Return to the forest and try the Moonwatch ladder. Travel is unavailable
+9. Return to the forest and try the Moonwatch ladder. Travel is unavailable
    during departure, arrival, birthday and ladder scenes.
-9. Restart while away, then refresh. Both should start a fresh forest adventure,
+10. Restart while away, then refresh. Both should start a fresh forest adventure,
    with an empty bag and no destination gifts or memories.
 
 ## Automated checks
@@ -77,7 +83,13 @@ They test real travel controls, manual exploration, a memory and a gift box in e
 photo export, companion movement, restoration, restart and refresh. Unit tests
 check routes to all 15 landmarks and all 25 gift boxes, that every gift box and
 animal starts on open ground, navigation boundaries, deduplication, scene
-disposal, failed-load recovery and frozen/reduced-motion animation. Physical phone
+disposal, failed-load recovery and frozen/reduced-motion animation.
+`tests/city-traffic.test.js` samples every driving lane across the width of a
+car and drives the whole fleet for forty simulated seconds, asserting no car
+ever reaches a building; it also checks that the signals never show green both
+ways, that a car holds behind the stop line and crosses on green, that a
+follower keeps its distance, that cars wait for a bear in the road, and that
+every junction offers a way on including a U-turn. Physical phone
 performance and haptic feel still need device testing.
 
 Only one additional destination scene exists at a time. Its GPU resources are

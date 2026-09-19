@@ -37,6 +37,10 @@ five ribboned **gift boxes** to collect, three landmarks to remember, its own
 **animals to say hello to**, and things happening around you — cars and a tram
 in the city, a sailing boat and a ship out in the bay, a hay wagon in the
 village, a cable car crossing the mountains, and a sleigh in the snow.
+**Lumen City** is laid out as a proper road grid: traffic is driven from the same
+grid the roads are drawn from, so cars keep to their lanes, queue behind each
+other, brake at the two signalled crossroads, steer into their turns, take a
+U-turn now and then, and stop for a bear on the zebra crossing.
 **Bubu comes along on every trip**, before and after her birthday. Destination
 gifts are kept in your travel journal and never touch the birthday bag, so your
 birthday progress and forest position are exactly where you left them when you

@@ -15,19 +15,17 @@ export const DESTINATIONS = [
   ],friends:[
     {kind:'sheep',x:-21,z:11},{kind:'sheep',x:-24,z:7},{kind:'rabbit',x:9,z:-6},{kind:'rabbit',x:12,z:-4},{kind:'deer',x:25,z:-7},
   ]},
-  {id:'city',name:'Lumen City',kind:'City',tag:'LITTLE BEARS, BIG LIGHTS',icon:'city',color:'#788ba5',sky:0xafc6dd,ground:0xaaaeb1,description:'Pastel townhouses, a tram avenue and a fountain beneath the clock tower.',detail:'Clock square · Tram stop · Pocket garden',spawn:{x:0,z:21},landmarks:[
-    {id:'clock',name:'Clocktower square',x:0,z:2,memory:'In a city full of clocks, we forgot to check the time.'},
-    {id:'tram',name:'The old tram stop',x:14,z:8,memory:'Ding, ding. A little journey through a very big day.'},
-    {id:'garden',name:'The pocket garden',x:-13,z:-11,memory:'Even between tall buildings, there is room for a little green.'},
+  {id:'city',name:'Lumen City',kind:'City',tag:'LITTLE BEARS, BIG LIGHTS',icon:'city',color:'#788ba5',sky:0xafc6dd,ground:0xaaaeb1,description:'Pastel townhouses, a signalled avenue and a fountain beneath the clock tower.',detail:'Clock square · Tram stop · Pocket garden',spawn:{x:5.5,z:20},landmarks:[
+    {id:'clock',name:'Clocktower square',x:-12,z:-1.5,memory:'In a city full of clocks, we forgot to check the time.'},
+    {id:'tram',name:'The old tram stop',x:28.5,z:11.5,memory:'Ding, ding. A little journey through a very big day.'},
+    {id:'garden',name:'The pocket garden',x:12,z:-18.5,memory:'Even between tall buildings, there is room for a little green.'},
   ],gifts:[
-    {id:'ticket',name:'Two tram tickets',short:'Tram tickets',color:0xa9b6c6,x:17,z:12,note:'“One each. No idea where they go.”'},
-    {id:'postcard',name:'A city postcard',short:'City postcard',color:0xd9c9a4,x:-7,z:-15,note:'“Wish you were here. You are here.”'},
-    {id:'icecream',name:'Two scoops, one cone',short:'Ice cream',color:0xe2b6b0,x:8,z:15,note:'“It melted a little. It was still perfect.”'},
-    {id:'key',name:'A little brass key',short:'Brass key',color:0xd4b473,x:-25,z:13,note:'“It doesn’t open anything. Dudu kept it anyway.”'},
-    {id:'skyline',name:'A rooftop balloon',short:'Rooftop balloon',color:0xb0a2c4,x:26,z:-25,note:'“We let it go from the highest step we could find.”'},
-  ],friends:[
-    {kind:'rabbit',x:-12,z:-13},{kind:'rabbit',x:-9,z:-9},{kind:'fox',x:-24,z:-25},{kind:'fox',x:24,z:6},
-  ]},
+    {id:'ticket',name:'Two tram tickets',short:'Tram tickets',color:0xa9b6c6,x:27.5,z:19,note:'“One each. No idea where they go.”'},
+    {id:'postcard',name:'A city postcard',short:'City postcard',color:0xd9c9a4,x:-9,z:-5.5,note:'“Wish you were here. You are here.”'},
+    {id:'icecream',name:'Two scoops, one cone',short:'Ice cream',color:0xe2b6b0,x:11.5,z:12,note:'“It melted a little. It was still perfect.”'},
+    {id:'key',name:'A little brass key',short:'Brass key',color:0xd4b473,x:-30,z:0,note:'“It doesn’t open anything. Dudu kept it anyway.”'},
+    {id:'skyline',name:'A rooftop balloon',short:'Rooftop balloon',color:0xb0a2c4,x:21,z:-22.8,note:'“We let it go from the highest step we could find.”'},
+  ],friends:[]},
   {id:'beach',name:'Seashell Bay',kind:'Beach',tag:'SALT AIR & SANDY PAWS',icon:'water',color:'#579eaa',sky:0x83cddf,ground:0xe8d39e,description:'Waves roll in beneath palms, pastel parasols and a sleepy lighthouse.',detail:'Shell shore · Lighthouse walk · Sunset picnic',spawn:{x:0,z:19},landmarks:[
     {id:'shell',name:'The shell shore',x:0,z:-6,memory:'We held a shell to our ears. The sea had a story to tell.'},
     {id:'lighthouse',name:'Lighthouse walk',x:-16,z:0,memory:'A little light to help every wanderer find their way home.'},
