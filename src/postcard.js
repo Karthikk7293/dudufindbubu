@@ -74,7 +74,7 @@ export class PostcardCamera {
     ctx.fillStyle='#f6f1e5';ctx.fillRect(0,0,canvas.width,canvas.height);
     // Copy immediately while the WebGL drawing buffer still contains this frame.
     ctx.drawImage(source,border,border,width,height);
-    ctx.fillStyle='#526549';ctx.font=`600 ${Math.round(width*.023)}px Georgia`;ctx.fillText('A LITTLE MOMENT IN SUNNYWOOD',border,height+border*2+footer*.3);
+    ctx.fillStyle='#526549';ctx.font=`600 ${Math.round(width*.023)}px Georgia`;ctx.fillText(`A LITTLE MOMENT IN ${this.world.travel?.current.name.toUpperCase()||'SUNNYWOOD'}`,border,height+border*2+footer*.3,width);
     ctx.fillStyle='#7c816e';ctx.font=`italic ${Math.round(width*.023)}px Georgia`;
     ctx.fillText((message.trim()||'A little journey. A lot of love.').slice(0,80),border,height+border*2+footer*.65,width);
     const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/png'));

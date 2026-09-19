@@ -19,14 +19,17 @@ try{
       document.querySelector('#label').textContent=`Dudu · ${moods[0]}                     Bubu · ${moods[1]}`;
       bears.forEach((b,i)=>{b.userData.expression.reset();b.userData.expression.update(.1,{mood:moods[i]},true);for(let frame=0;frame<60;frame++)animateBearPose(b,1/60,2,false);animateBearFace(b,2);});
       renderer.render(scene,camera);
-      return bears.map(b=>({mood:b.userData.expression.mood,open:b.userData.openMouth.visible,happy:b.userData.happyEyes[0].visible,elbow:b.userData.forearms[0].rotation.x}));
+      return bears.map(b=>({mood:b.userData.expression.mood,open:b.userData.openMouth.visible,happy:b.userData.happyEyes[0].visible,elbow:b.userData.forearms[0].rotation.x,wave:Math.abs(b.userData.arms[b.userData.waveHand].rotation.z),ear:b.userData.ears[0].position.y}));
     }};
   });
-  for(const moods of [['calm','curious'],['surprised','wonder'],['delighted','shy'],['content','wish']]){
+  for(const moods of [['calm','bright'],['curious','surprised'],['delighted','shy'],['content','wish'],['greet','sleepy'],['wonder','bright']]){
     const result=await page.evaluate(moods=>window.study.render(moods),moods);
     assert.deepEqual(result.map(r=>r.mood),moods);
     if(moods[0]==='delighted'){assert.equal(result[0].happy,true);assert.equal(result[0].open,true);assert.ok(result[1].elbow<-.7);}
+    // Bubu's everyday face keeps her eyes round and her little smile open.
+    if(moods[1]==='bright'){assert.equal(result[1].happy,false);assert.equal(result[1].open,true);}
+    if(moods[0]==='greet')assert.ok(result[0].wave>.6,'the greeting lifts a paw');
     await page.screenshot({path:`test-results/expressions-${moods.join('-')}.png`});
   }
-  assert.deepEqual(errors,[]);console.log('Eight facial expressions and articulated paw poses rendered without browser errors.');
+  assert.deepEqual(errors,[]);console.log('Eleven facial expressions, ear moods and articulated paw poses rendered without browser errors.');
 }finally{await browser.close();}

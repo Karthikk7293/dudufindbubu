@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { BearExpression, bearBlink, lookAtBearTarget } from '../src/bear-expression.js';
+import { BearExpression, bearBlink, lookAtBearTarget, gazeAtBearTarget } from '../src/bear-expression.js';
 
 test('gift reactions move from surprise to delight, then return to context',()=>{
   const state=new BearExpression();state.react('delighted',2);
@@ -29,4 +29,27 @@ test('head tracking stays within the shoulders and eyes do not blink in reduced 
   assert.ok(lookAtBearTarget(bear,{x:-2,z:2})<0);
   assert.ok(bearBlink(.49)<.1);assert.equal(bearBlink(.49,0,true),1);
   assert.notEqual(bearBlink(.49,0),bearBlink(.49,2.2));
+});
+test('greeting waves, dozing lowers the lids, and gaze follows a target height',()=>{
+  const state=new BearExpression();
+  assert.equal(state.react('greet',2),true);
+  state.update(.3,{},true);assert.equal(state.values.wave,1);assert.ok(state.values.ears>.5);
+  state.reset();state.update(.3,{mood:'sleepy'},true);
+  assert.equal(state.values.droop,1);assert.ok(state.values.ears<-.5);
+  assert.equal(bearBlink(3,0,false,0),1);assert.ok(bearBlink(3,0,false,1)<1,'drowsy lids never open all the way');
+  assert.equal(bearBlink(.9,0,false,0),1);assert.ok(bearBlink(.9,0,false,1)<1,'drowsy blinks take longer to lift');
+  assert.equal(bearBlink(.9,0,true,1),1,'reduced motion keeps the eyes open');
+  const bear={position:{x:0,y:0,z:0},rotation:{y:0}};
+  assert.ok(gazeAtBearTarget(bear,{x:0,z:3,y:0})>.1,'a gift on the ground dips the muzzle');
+  assert.ok(gazeAtBearTarget(bear,{x:0,z:3,y:4})<0,'the moon nest lifts it');
+  assert.equal(gazeAtBearTarget(bear,{x:0,z:3}),0,'targets without a height keep the head level');
+  assert.equal(gazeAtBearTarget(bear,null),0);
+});
+test('every mood keeps the same channels so blends never leave a value behind',()=>{
+  const state=new BearExpression(),keys=Object.keys(state.values).filter(key=>key!=='look'&&key!=='gaze');
+  for(const mood of ['calm','curious','surprised','delighted','shy','content','wish','wonder','greet','sleepy','bright']){
+    const fresh=new BearExpression();fresh.update(.5,{mood},true);
+    for(const key of keys)assert.equal(typeof fresh.values[key],'number',`${mood}.${key}`);
+    assert.equal(fresh.mood,mood);
+  }
 });

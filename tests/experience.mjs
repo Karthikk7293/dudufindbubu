@@ -1,3 +1,4 @@
+import { chooseGroundPoint } from './manual-input.mjs';
 import { chromium } from 'playwright';
 import assert from 'node:assert/strict';
 import { freshState, START, SAVE_KEY } from '../src/game-state.js';
@@ -39,16 +40,16 @@ try{
       await page.screenshot({path:'test-results/third-person-day.png'});const start=s.position,yaw=s.camera.yaw;
       await page.mouse.move(760,380);await page.mouse.down();await page.mouse.move(250,410,{steps:5});await page.mouse.up();
       s=await snapshot();assert.ok(Math.abs(s.camera.yaw-yaw)>1);assert.deepEqual(s.position,start);assert.equal(s.route,0);
-      const pointer=await page.locator('#gift-pointer').boundingBox();assert.ok(pointer&&pointer.x>=0&&pointer.x+pointer.width<=1000&&pointer.y>=0,'A gift behind the camera keeps a visible pointer');
+      assert.equal(await page.locator('#gift-pointer').count(),0,'Looking around does not reveal a hidden gift pointer');
       const before=s.position,a=s.camera.yaw;await page.keyboard.down('w');await page.waitForFunction(p=>Math.hypot(window.__dudu.snapshot().position.x-p.x,window.__dudu.snapshot().position.z-p.z)>.6,before);await page.keyboard.up('w');
       s=await snapshot();assert.ok((s.position.x-before.x)*-Math.sin(a)+(s.position.z-before.z)*-Math.cos(a)>.3,'W moves forward relative to the rotated camera');
       await page.keyboard.press('c');assert.equal((await snapshot()).camera.perspective,false);await page.keyboard.press('c');assert.equal((await snapshot()).camera.perspective,true);
       await page.locator('#zoom-overview').click();await page.waitForFunction(()=>window.__dudu.snapshot().view>90);assert.equal((await snapshot()).camera.perspective,false);await page.locator('#zoom-overview').click();await page.waitForFunction(()=>window.__dudu.snapshot().camera.perspective);
       const distance=(await snapshot()).camera.distance;await page.locator('#zoom-in').click();assert.ok((await snapshot()).camera.distance<distance);
       await page.locator('#play-time').click();await page.waitForFunction(()=>window.__dudu.snapshot().nightBlend===1);await page.screenshot({path:'test-results/third-person-night.png'});
-      console.log('Third-person perspective, orbit without walking, camera-relative movement, behind-camera pointer, zoom, overview and night lighting passed.');
+      console.log('Third-person perspective, orbit without walking, camera-relative movement, manual exploration, zoom, overview and night lighting passed.');
     }else if(phase==='--reset'){
-      await page.locator('#guide-button').click();await page.waitForFunction(()=>!!window.__dudu.snapshot().nearby);await page.locator('#interact-button').click();await page.waitForFunction(()=>window.__dudu.snapshot().state.collected.length===1);
+      await chooseGroundPoint(page,{x:-22,z:19});await page.waitForFunction(()=>!!window.__dudu.snapshot().nearby);await page.locator('#interact-button').click();await page.waitForFunction(()=>window.__dudu.snapshot().state.collected.length===1);
       await page.evaluate(({key,state})=>{localStorage.setItem(key,JSON.stringify(state));localStorage.setItem('dudu-time-of-day','night');},{key:SAVE_KEY,state:(await snapshot()).state});
       await page.reload({waitUntil:'domcontentloaded'});await ready();s=await snapshot();assert.deepEqual(s.state,freshState());assert.deepEqual(s.position,START);assert.equal(s.bubuVisible,false);assert.equal(s.following,false);assert.equal(s.playing,false);assert.equal(s.timeOfDay,'night');assert.equal(await page.evaluate(key=>localStorage.getItem(key),SAVE_KEY),null);assert.match(await page.locator('#start-button').textContent(),/Let’s find Bubu/);
       console.log('A real collected gift and old stored progress reset on refresh; Bubu stays inside and the day/night preference remains.');

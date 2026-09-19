@@ -1,3 +1,4 @@
+import { chooseGroundPoint } from './manual-input.mjs';
 import { chromium } from 'playwright';
 import assert from 'node:assert/strict';
 import { mkdir } from 'node:fs/promises';
@@ -40,7 +41,7 @@ try{
   await page.getByRole('button',{name:'Zoom in',exact:true}).click();assert.ok((await snapshot()).zoom<zoomBefore);
   await page.getByRole('button',{name:'Zoom out',exact:true}).click();assert.ok(Math.abs((await snapshot()).zoom-zoomBefore)<.1);
   await page.mouse.move(550,550);await page.mouse.wheel(0,150);await page.waitForTimeout(200);assert.ok((await snapshot()).zoom>zoomBefore);
-  await page.keyboard.press('+');await page.getByRole('button',{name:'See whole forest'}).click();
+  await page.keyboard.press('+');await page.getByRole('button',{name:'See whole area'}).click();
   await page.waitForFunction(()=>window.__dudu.snapshot().view>85,null,{timeout:30000});
   assert.equal((await snapshot()).overview,true);await page.screenshot({path:'test-results/expanded-overview.png'});
   await page.getByRole('button',{name:'Follow Dudu'}).click();
@@ -54,10 +55,9 @@ try{
   await page.keyboard.press('m');await page.waitForSelector('#map-dialog[open]');
   const pausedAt=(await snapshot()).position;await page.keyboard.down('w');await page.waitForTimeout(300);await page.keyboard.up('w');assert.deepEqual((await snapshot()).position,pausedAt);
   await page.screenshot({path:'test-results/expanded-map.png'});await page.locator('#map-dialog [data-close]').click();
-  await page.keyboard.press('b');await page.waitForSelector('#bag-dialog[open]');await page.getByRole('button',{name:'A little hint'}).click();assert.ok((await page.locator('#bag-hint').textContent()).length>25);await page.getByRole('button',{name:'Love letter: not found'}).click();await page.locator('#track-gift').click();
-  await page.waitForFunction(()=>window.__dudu.snapshot().guidance?.id==='letter');
-  assert.ok((await snapshot()).guidance.path.length>0);assert.equal(await page.locator('#guide-name').textContent(),'Love letter');assert.ok(await page.locator('#gift-pointer').isVisible());
-  await page.screenshot({path:'test-results/love-letter-pointer.png'});
+  await page.keyboard.press('b');await page.waitForSelector('#bag-dialog[open]');await page.getByRole('button',{name:'A little hint'}).click();assert.ok((await page.locator('#bag-hint').textContent()).length>25);await page.getByRole('button',{name:'Love letter: not found'}).click();assert.match(await page.locator('#bag-hint').textContent(),/wishing tree/);await page.locator('#bag-dialog .dialog-close').click();
+  assert.equal((await snapshot()).route,0);assert.equal(await page.locator('#gift-pointer,#guide-button,#track-gift').count(),0);
+  await page.screenshot({path:'test-results/manual-exploration-hud.png'});
   await page.keyboard.press('p');await page.waitForSelector('#pause-dialog[open]');
   await page.getByRole('button',{name:'Turn sound off',exact:true}).click();assert.equal((await snapshot()).sound,false);
   await page.getByRole('button',{name:'Turn sound on',exact:true}).click();assert.equal((await snapshot()).sound,true);
@@ -75,15 +75,14 @@ try{
     assert.equal((await snapshot()).state.bubuArrived,false);
     console.log('An early visit cannot reveal Bubu without all eight gifts.');
 
-    // Find the previously hard-to-see love letter using only the new pointer.
+    // The player chooses where to walk; collecting the final gift must not route to Bubu.
     await seed({...freshState(),departed:true,position:{x:6,z:-5},collected:GIFTS.filter(g=>g.id!=='letter').map(g=>g.id)});
-    await begin();await settled();await page.waitForFunction(()=>window.__dudu.snapshot().guidance?.id==='letter');
-    await page.locator('#guide-button').click();
+    await begin();await settled();await chooseGroundPoint(page,{x:13,z:-5});
     await page.waitForFunction(()=>window.__dudu.snapshot().nearby==='letter',null,{timeout:45000});
     await page.locator('#interact-button').click();
-    await page.waitForFunction(()=>window.__dudu.snapshot().guidance?.id==='bubu');
+    assert.equal((await snapshot()).route,0);
     assert.equal((await snapshot()).state.collected.length,8);assert.equal((await snapshot()).bubuVisible,false);
-    console.log('The letter pointer walks to the gift; after collection it leads to Bubu.');
+    console.log('The letter can be found manually; collecting it does not lead to Bubu.');
     const collected=[];
     for(const gift of GIFTS){
       await seed({...freshState(),departed:true,bubuArrived:true,position:{x:gift.x+1.6,z:gift.z},collected:[...collected]});
@@ -108,7 +107,7 @@ try{
     await page.waitForSelector('#ending-dialog[open]',{timeout:60000});
     assert.equal((await snapshot()).state.completed,true);await page.screenshot({path:'test-results/expanded-birthday.png'});
     await page.getByRole('button',{name:'Walk together'}).click();await page.keyboard.press('c');
-    assert.equal((await snapshot()).following,true);assert.equal(await page.locator('#guide-button').isVisible(),true);assert.equal((await snapshot()).guidance.id,'moon-nest');
+    assert.equal((await snapshot()).following,true);assert.equal((await snapshot()).route,0);
     const reunion=(await snapshot()).bubuPosition;
     const togetherTarget=await page.evaluate(()=>window.__dudu.project(0,-24));await page.mouse.click(togetherTarget.x,togetherTarget.y);
     await page.waitForFunction(()=>window.__dudu.snapshot().position.x<1.5,null,{timeout:45000});
@@ -142,7 +141,7 @@ try{
   await touch.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
   await tablet.screenshot({path:'test-results/fullscreen-tablet.png'});
   assert.equal(await tablet.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
-  const guideBox=await tablet.locator('#guide-button').boundingBox(),toolsBox=await tablet.locator('#play-tools').boundingBox();assert.ok(guideBox.x+guideBox.width<toolsBox.x,'Tablet pointer card and controls do not overlap');
+  const guideBox=await tablet.locator('#journey-status').boundingBox(),toolsBox=await tablet.locator('#play-tools').boundingBox();assert.ok(guideBox.x+guideBox.width<toolsBox.x,'Tablet pointer card and controls do not overlap');
   assert.deepEqual(errors,[],'No browser runtime errors');console.log('Tablet full-screen, pinch zoom, joystick, and browser checks passed.');
 }catch(error){if(!page.isClosed())console.log('Failure state:',await snapshot());throw error;}
 finally{await browser.close();}

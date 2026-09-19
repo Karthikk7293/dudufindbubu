@@ -1,16 +1,8 @@
-MediaPipe Tasks Vision
-Copyright Google LLC / the MediaPipe authors.
-Package: @mediapipe/tasks-vision (version pinned in package-lock.json)
-Source: https://github.com/google-ai-edge/mediapipe
-License: Apache License, Version 2.0 (see Apache-2.0.txt).
-The runtime is bundled without source modifications. The app's worker and
-gesture mappings are separate application code.
-
-Google MediaPipe Hand Landmarker model
-Source and version are recorded in /models/README.md.
-
 DM Sans
 See /fonts/DM-Sans-OFL.txt for its SIL Open Font License.
+
+Playfair Display
+See /fonts/Playfair-Display-OFL.txt for its SIL Open Font License.
 
 Three.js
 Copyright 2010-2024 Three.js Authors.

@@ -1,3 +1,4 @@
+import { chooseGroundPoint } from './manual-input.mjs';
 import { chromium } from 'playwright';
 import assert from 'node:assert/strict';
 import { GIFTS, freshState, SAVE_KEY, START } from '../src/game-state.js';
@@ -8,10 +9,8 @@ const snap=()=>page.evaluate(()=>window.__dudu.snapshot());
 await page.addInitScript(({key,initial})=>{const seed=sessionStorage.getItem('birthday-test-seed');if(seed){window.__DUDU_TEST_STATE__=JSON.parse(seed);sessionStorage.removeItem('birthday-test-seed');}else if(!sessionStorage.getItem('refinement-started')){window.__DUDU_TEST_STATE__=initial;sessionStorage.setItem('refinement-started','yes');}},{key:SAVE_KEY,initial:{...freshState(),departed:true,bubuArrived:true,collected:GIFTS.map(g=>g.id),position:{x:6,z:-23}}});
 try{
   await page.goto(process.env.GAME_URL||'http://localhost:3000');await page.waitForFunction(()=>window.__dudu);await page.locator('#start-button').click();
-  await page.waitForFunction(()=>window.__dudu.snapshot().guidance?.id==='bubu');
-  assert.equal(await page.locator('#guide-name').textContent(),'Birthday picnic');
-  assert.ok((await page.locator('#guide-detail').textContent()).includes('Tap to follow'),'Outside interaction range, the pointer still offers to walk');
-  await page.locator('#guide-button').click();await page.waitForFunction(()=>window.__dudu.snapshot().nearby==='bubu',null,{timeout:30000});
+  assert.equal(await page.locator('#guide-button,#gift-pointer').count(),0);
+  await chooseGroundPoint(page,{x:6,z:-27});await page.waitForFunction(()=>window.__dudu.snapshot().nearby==='bubu',null,{timeout:30000});
   await page.locator('#interact-button').click();assert.equal((await snap()).story,'party');assert.equal((await snap()).state.completed,false);
   await page.keyboard.press('p');await page.waitForSelector('#pause-dialog[open]');const partyTime=(await snap()).partyTime;
   await page.waitForTimeout(700);assert.equal((await snap()).partyTime,partyTime,'Pausing freezes the birthday sequence');
@@ -19,7 +18,7 @@ try{
   await page.waitForFunction(()=>window.__dudu.snapshot().partyTime>=3.6,null,{timeout:45000});assert.equal((await snap()).candleLit,false);
   await page.screenshot({path:'test-results/birthday-party.png'});
   await page.waitForSelector('#ending-dialog[open]',{timeout:60000});assert.equal((await snap()).state.completed,true);
-  await page.getByRole('button',{name:'Walk together'}).click();await page.keyboard.press('c');assert.equal((await snap()).following,true);assert.equal(await page.locator('#guide-button').isVisible(),true);assert.equal((await snap()).guidance.id,'moon-nest');
+  await page.getByRole('button',{name:'Walk together'}).click();await page.keyboard.press('c');assert.equal((await snap()).following,true);assert.equal((await snap()).route,0);
   const original=(await snap()).bubuPosition,point=await page.evaluate(()=>window.__dudu.project(0,-24));await page.mouse.click(point.x,point.y);
   await page.waitForFunction(()=>window.__dudu.snapshot().position.x<1.5,null,{timeout:45000});
   await page.waitForFunction(p=>Math.hypot(window.__dudu.snapshot().bubuPosition.x-p.x,window.__dudu.snapshot().bubuPosition.z-p.z)>2,original,{timeout:45000});
@@ -27,7 +26,7 @@ try{
   assert.ok(await page.evaluate(async()=>{const {isWalkable}=await import('/src/game-state.js'),s=window.__dudu.snapshot();return isWalkable(s.bubuPosition.x,s.bubuPosition.z,s.obstacles);}));
   await page.screenshot({path:'test-results/walking-together.png'});
   await page.reload();await page.waitForFunction(()=>window.__dudu);assert.equal((await snap()).following,false);assert.deepEqual((await snap()).state,freshState());
-  console.log('Picnic guidance, party pause, candle wish, completed birthday, companion walking and reset on refresh passed.');
+  console.log('Manual picnic arrival, party pause, candle wish, completed birthday, companion walking and reset on refresh passed.');
   await page.locator('#start-button').click();await page.keyboard.press('p');await page.getByRole('button',{name:'Start a fresh adventure'}).click();assert.equal((await snap()).following,false);assert.equal((await snap()).bubuVisible,false);
   await page.waitForFunction(()=>window.__dudu.snapshot().story==='exploring',null,{timeout:45000});assert.deepEqual((await snap()).position,START);
   await page.evaluate(state=>sessionStorage.setItem('birthday-test-seed',JSON.stringify(state)),{...freshState(),departed:true,position:{x:8,z:26}});
@@ -35,7 +34,7 @@ try{
   for(let i=0;i<3;i++)await page.keyboard.press('+');await page.waitForFunction(()=>window.__dudu.snapshot().view<16,null,{timeout:30000});
   const birds=(await snap()).weather.birds;await page.waitForTimeout(500);assert.deepEqual((await snap()).weather.birds,birds);
   await page.screenshot({path:'test-results/lamb-faces.png'});
-  await page.getByRole('button',{name:'See whole forest'}).click();await page.waitForFunction(()=>window.__dudu.snapshot().view>90,null,{timeout:30000});await page.screenshot({path:'test-results/weather-overview.png'});
+  await page.getByRole('button',{name:'See whole area'}).click();await page.waitForFunction(()=>window.__dudu.snapshot().view>90,null,{timeout:30000});await page.screenshot({path:'test-results/weather-overview.png'});
   console.log('Restart, lamb faces, sunshine and reduced-motion atmosphere checked.');
   await page.close();
   const tablet=await browser.newPage({viewport:{width:768,height:1024},deviceScaleFactor:1,isMobile:true,hasTouch:true});tablet.on('pageerror',error=>errors.push(error.message));
@@ -46,7 +45,7 @@ try{
   assert.ok(await tablet.evaluate(()=>window.__dudu.snapshot().zoom)<before);assert.equal(await tablet.evaluate(()=>window.__dudu.snapshot().route),0);
   const initial=await tablet.evaluate(()=>window.__dudu.snapshot().position),joy=await tablet.locator('#joystick').boundingBox();
   await touch.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:joy.x+90,y:joy.y+55}]});await tablet.waitForFunction(start=>Math.hypot(window.__dudu.snapshot().position.x-start.x,window.__dudu.snapshot().position.z-start.z)>.5,initial,{timeout:30000});await touch.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
-  const guide=await tablet.locator('#guide-button').boundingBox(),controls=await tablet.locator('#play-tools').boundingBox();assert.ok(guide.x+guide.width<controls.x);assert.equal(await tablet.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
+  const guide=await tablet.locator('#journey-status').boundingBox(),controls=await tablet.locator('#play-tools').boundingBox();assert.ok(guide.x+guide.width<controls.x);assert.equal(await tablet.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
   await tablet.screenshot({path:'test-results/fullscreen-tablet.png'});assert.deepEqual(errors,[]);console.log('Tablet fullscreen, guide layout, pinch, joystick and runtime checks passed.');
 }catch(error){if(!page.isClosed())console.log('Failure state:',await snap());throw error;}
 finally{await browser.close();}

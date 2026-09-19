@@ -57,31 +57,27 @@ export function canCelebrate(state) {
   return !state.completed && state.bubuArrived && state.collected.length === GIFTS.length && Math.hypot(state.position.x - BUBU.x, state.position.z - BUBU.z) <= 3.2;
 }
 export function shouldRevealBubu(state) { return state.departed&&state.collected.length===GIFTS.length&&!state.bubuArrived&&Math.hypot(state.position.x-DESTINATION.x,state.position.z-DESTINATION.z)<=4; }
-export function guidanceTarget(state, preferredId) {
-  if(state.completed)return {...MOON_NEST.entry,id:'moon-nest',short:'Moonwatch nest'};
-  const missing=GIFTS.filter(g=>!state.collected.includes(g.id));
-  return missing.find(g=>g.id===preferredId)||missing.sort((a,b)=>Math.hypot(a.x-state.position.x,a.z-state.position.z)-Math.hypot(b.x-state.position.x,b.z-state.position.z))[0]||{...(state.bubuArrived?BUBU:DESTINATION),id:'bubu',short:state.bubuArrived?'Birthday picnic':'Bubu’s nest'};
-}
 export function clampZoom(view) { return Math.min(108,Math.max(14,view)); }
-export function isWalkable(x, z, obstacles = []) {
-  if (Math.hypot(x, z) > WORLD_RADIUS) return false;
+export function isWalkable(x, z, obstacles = [], layout) {
+  if (Math.hypot(x, z) > (layout?.radius ?? WORLD_RADIUS)) return false;
+  if(layout?.blocked?.(x,z))return false;
   // A wooden bridge crosses the middle of the pond.
-  for(const pond of PONDS)if(((x-pond.x)/pond.rx)**2+((z-pond.z)/pond.rz)**2<1&&Math.abs(z-pond.z)>.85)return false;
+  for(const pond of layout?.ponds ?? PONDS)if(((x-pond.x)/pond.rx)**2+((z-pond.z)/pond.rz)**2<1&&Math.abs(z-pond.z)>.85)return false;
   for (const obstacle of obstacles) if (Math.hypot(x - obstacle.x, z - obstacle.z) < obstacle.radius + .38) return false;
   return true;
 }
-export function moveWithCollisions(position, dx, dz, obstacles) {
+export function moveWithCollisions(position, dx, dz, obstacles, layout) {
   const steps = Math.max(1, Math.ceil(Math.hypot(dx, dz) / .2));
   for (let step = 0; step < steps; step++) {
-    if (isWalkable(position.x + dx / steps, position.z, obstacles)) position.x += dx / steps;
-    if (isWalkable(position.x, position.z + dz / steps, obstacles)) position.z += dz / steps;
+    if (isWalkable(position.x + dx / steps, position.z, obstacles, layout)) position.x += dx / steps;
+    if (isWalkable(position.x, position.z + dz / steps, obstacles, layout)) position.z += dz / steps;
   }
   return position;
 }
 
 // Small A* grid keeps click-to-walk routes around trees and water.
-export function findPath(start, goal, obstacles) {
-  if (!isWalkable(goal.x, goal.z, obstacles)) return [];
+export function findPath(start, goal, obstacles, layout) {
+  if (!isWalkable(goal.x, goal.z, obstacles, layout)) return [];
   const snap = n => Math.round(n), key = (x,z) => `${x},${z}`;
   const sx = snap(start.x), sz = snap(start.z), gx = snap(goal.x), gz = snap(goal.z);
   const open = [{ x:sx, z:sz, g:0, f:0 }], seen = new Map([[key(sx,sz),0]]), parents = new Map();
@@ -98,8 +94,8 @@ export function findPath(start, goal, obstacles) {
     }
     for (const [dx,dz] of directions) {
       const x=current.x+dx, z=current.z+dz;
-      if (!isWalkable(x,z,obstacles) || !isWalkable(current.x+dx/2,current.z+dz/2,obstacles)) continue;
-      if (dx && dz && (!isWalkable(current.x+dx,current.z,obstacles) || !isWalkable(current.x,current.z+dz,obstacles))) continue;
+      if (!isWalkable(x,z,obstacles,layout) || !isWalkable(current.x+dx/2,current.z+dz/2,obstacles,layout)) continue;
+      if (dx && dz && (!isWalkable(current.x+dx,current.z,obstacles,layout) || !isWalkable(current.x,current.z+dz,obstacles,layout))) continue;
       const cost=current.g+Math.hypot(dx,dz), id=key(x,z);
       if (cost >= (seen.get(id) ?? Infinity)) continue;
       seen.set(id,cost); parents.set(id,current);

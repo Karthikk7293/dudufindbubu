@@ -1,3 +1,4 @@
+import { chooseGroundPoint } from './manual-input.mjs';
 import { chromium } from 'playwright';
 import assert from 'node:assert/strict';
 import { freshState, GIFTS, DESTINATION } from '../src/game-state.js';
@@ -48,7 +49,7 @@ try{
     assert.equal((await snap()).following,true);
     await page.locator('#interact-button').click();await page.waitForFunction(()=>window.__dudu.snapshot().expressions[1].mood==='shy');
     assert.equal((await snap()).route,0);
-    await page.locator('#guide-button').click();const before=(await snap()).bubuPosition;
+    const before=(await snap()).bubuPosition;await chooseGroundPoint(page,{x:0,z:-24},{wait:false});
     await page.waitForFunction(p=>Math.hypot(window.__dudu.snapshot().bubuPosition.x-p.x,window.__dudu.snapshot().bubuPosition.z-p.z)>.5,before);
     await page.locator('#play-pause').click();await page.locator('#restart-button').click();
     const fresh=await snap();assert.equal(fresh.state.collected.length,0);assert.equal(fresh.bubuVisible,false);assert.ok(fresh.expressions.every(e=>e.reaction===null));

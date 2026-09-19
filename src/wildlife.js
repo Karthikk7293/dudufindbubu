@@ -89,6 +89,18 @@ export function createAnimal(kind,x=0,z=0,index=0){
   return {kind,group,body,head,neck,legs,ears,eyes,tail,shadow,x,z,groundY:.2,phase:index*1.7,brain:new Wildlife(kind,x,z,index+1)};
 }
 
+// Destinations build and tear down their own animals. Only per-animal geometry
+// and materials are released; the shared sphere and palette stay alive.
+export function disposeAnimal(animal){
+  const shared=new Set(materials.values());
+  animal.group.traverse(node=>{
+    if(!node.isMesh)return;
+    if(node.geometry!==sphere)node.geometry.dispose();
+    for(const m of Array.isArray(node.material)?node.material:[node.material])if(!shared.has(m))m.dispose();
+  });
+  animal.group.removeFromParent();
+}
+
 export function updateAnimal(animal,dt,time,player,walkable,night,reducedMotion){
   const {brain,group,body,head,neck,legs,ears,eyes,tail,kind,phase}=animal;
   if(dt<=0)return;
